@@ -32,3 +32,4 @@ lerna-debug.log*
 # Screenshots dumped at the project root by the Playwright MCP server
 # during dev sessions. Real app images belong under /public.
 /*.png
+.vercel

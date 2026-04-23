@@ -400,23 +400,23 @@ export function MirrorScreen({
                       )}
                     </>
                   )}
-                  {/* Outerwear — open jacket panels sitting over the torso / hip area. */}
+                  {/* Outerwear — open jacket with rounded shoulder and swooping lapels. */}
                   {outer && (
                     <FigureGarment
                       item={outer}
-                      path="M42 66 Q50 58 60 60 L78 66 L82 200 L62 200 L54 170 L46 100 Z M158 66 Q150 58 140 60 L122 66 L118 200 L138 200 L146 170 L154 100 Z"
+                      path="M38 74 Q52 58 74 62 Q78 68 82 76 L90 208 L72 208 L62 196 L50 150 L42 110 Z M162 74 Q148 58 126 62 Q122 68 118 76 L110 208 L128 208 L138 196 L150 150 L158 110 Z"
                     />
                   )}
-                  {/* Shoes — two ovals at the feet. */}
+                  {/* Shoes — tapered ovals with a subtle heel lift. */}
                   {shoes && (
                     <>
                       <FigureGarment
                         item={shoes}
-                        path="M60 322 Q54 320 52 326 Q52 334 58 336 L84 338 Q92 338 92 330 L90 322 Z"
+                        path="M54 320 Q50 318 50 324 Q50 334 58 338 L86 340 Q96 340 96 332 Q96 322 92 318 Z"
                       />
                       <FigureGarment
                         item={shoes}
-                        path="M140 322 Q146 320 148 326 Q148 334 142 336 L116 338 Q108 338 108 330 L110 322 Z"
+                        path="M146 320 Q150 318 150 324 Q150 334 142 338 L114 340 Q104 340 104 332 Q104 322 108 318 Z"
                       />
                     </>
                   )}
