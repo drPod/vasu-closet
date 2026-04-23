@@ -6,6 +6,7 @@ import { ItemThumbOf } from "../components/ItemThumb";
 import { PhoneChrome } from "../components/PhoneChrome";
 import { SnapNav, type ScreenKey } from "../components/SnapNav";
 import { useForecast } from "../hooks/useWeather";
+import { WeatherIcon } from "../components/WeatherIcon";
 
 const TODAY = "2026-04-22";
 
@@ -165,8 +166,8 @@ export function CalendarScreen({
               const dress = plan?.dressId ? byId.get(plan.dressId) : undefined;
               const hasOutfit = !!(top || bot || dress);
               const dayWx = forecastByDate.get(iso);
-              const weatherText = dayWx
-                ? `${dayWx.icon} ${dayWx.temp}° · ${dayWx.note}`
+              const weatherLabel = dayWx
+                ? `${dayWx.temp}° · ${dayWx.note}`
                 : plan?.weatherNote ?? "";
 
               const cls =
@@ -198,7 +199,14 @@ export function CalendarScreen({
                     )}
                     <div className="cal-day-meta">
                       <div className="cal-day-event">{plan?.event ?? ""}</div>
-                      <div className="cal-day-weather">{weatherText}</div>
+                      <div className="cal-day-weather">
+                        {dayWx && (
+                          <span style={{ marginRight: 4, verticalAlign: "text-bottom" }}>
+                            <WeatherIcon code={dayWx.code} size={11} />
+                          </span>
+                        )}
+                        {weatherLabel}
+                      </div>
                       {status === "empty" && (
                         <div className="cal-day-empty-cta">plan an outfit</div>
                       )}

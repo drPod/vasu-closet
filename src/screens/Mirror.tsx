@@ -6,6 +6,7 @@ import { ItemThumbOf } from "../components/ItemThumb";
 import { PhoneChrome } from "../components/PhoneChrome";
 import { SnapNav, type ScreenKey } from "../components/SnapNav";
 import { FigureGarment } from "../components/FigureGarment";
+import { WeatherIcon } from "../components/WeatherIcon";
 import { useBlobUrl } from "../hooks/useBlobUrl";
 import { desiredWarmth, isWarmthOff, itemSuitability } from "../lib/weather";
 import { useDayForecast } from "../hooks/useWeather";
@@ -94,6 +95,11 @@ export function MirrorScreen({
   const [tab, setTab] = useState<ShelfTab>("tops");
   const [rotate, setRotate] = useState(0);
   const [eventText, setEventText] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+  const flashToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 1400);
+  };
 
   // A Closet "try on" tap pipes a specific item in as the initial selection.
   // When a preset is active it wins over the plan prefill.
@@ -231,6 +237,7 @@ export function MirrorScreen({
       tag: "new save",
       savedAt: now,
     });
+    flashToast("saved to lookbook");
   };
 
   const commitOutfit = async () => {
@@ -271,7 +278,9 @@ export function MirrorScreen({
     if (mode !== "today") {
       clearIntent();
       onNav("calendar");
+      return;
     }
+    flashToast("wearing today");
   };
 
   const plannedLabel = planningDate ? parsePlannedLabel(planningDate) : null;
@@ -303,7 +312,7 @@ export function MirrorScreen({
               >
                 {forecast ? (
                   <>
-                    <span>{forecast.icon}</span>
+                    <WeatherIcon code={forecast.code} size={14} />
                     <span>
                       {forecast.temp}° · {forecast.note}
                     </span>
@@ -372,51 +381,55 @@ export function MirrorScreen({
                   style={{ position: "absolute", inset: 0 }}
                   aria-hidden="true"
                 >
+                  {/* Paths are tuned for a centered, head-to-feet portrait
+                       at this viewBox. They hug the body rather than
+                       spanning the full frame so real photos don't look
+                       engulfed by the overlay. */}
                   {wearingDress ? (
                     <FigureGarment
                       item={dress!}
-                      path="M52 70 Q70 62 82 66 L100 68 L118 66 Q130 62 148 70 L156 180 L170 310 L30 310 L44 180 Z"
+                      path="M72 82 Q82 72 96 74 L100 76 L104 74 Q118 72 128 82 L135 178 Q148 280 150 312 L50 312 Q52 280 65 178 Z"
                     />
                   ) : (
                     <>
                       {underTop && (
                         <FigureGarment
                           item={underTop}
-                          path="M48 66 Q68 58 82 62 L100 64 L118 62 Q132 58 152 66 L156 180 L146 202 L54 202 L44 180 Z"
+                          path="M70 78 Q80 70 96 72 L100 74 L104 72 Q120 70 130 78 L134 180 L132 200 L68 200 L66 180 Z"
                           opacity={0.9}
                         />
                       )}
                       {top && (
                         <FigureGarment
                           item={top}
-                          path="M52 70 Q70 62 82 66 L100 68 L118 66 Q130 62 148 70 L152 170 L146 200 L54 200 L48 170 Z"
+                          path="M72 82 Q82 74 96 76 L100 78 L104 76 Q118 74 128 82 L131 175 Q132 192 128 200 L72 200 Q68 192 69 175 Z"
                         />
                       )}
                       {bot && (
                         <FigureGarment
                           item={bot}
-                          path="M54 200 L146 200 L142 230 L136 300 L128 332 L108 332 L106 232 L100 230 L94 232 L92 332 L72 332 L64 300 L58 230 Z"
+                          path="M72 200 L128 200 L130 228 L124 296 L118 326 L106 326 L104 232 L100 230 L96 232 L94 326 L82 326 L76 296 L70 228 Z"
                         />
                       )}
                     </>
                   )}
-                  {/* Outerwear — open jacket with rounded shoulder and swooping lapels. */}
+                  {/* Outerwear — lapel panels framing the torso, narrower to sit over the top. */}
                   {outer && (
                     <FigureGarment
                       item={outer}
-                      path="M38 74 Q52 58 74 62 Q78 68 82 76 L90 208 L72 208 L62 196 L50 150 L42 110 Z M162 74 Q148 58 126 62 Q122 68 118 76 L110 208 L128 208 L138 196 L150 150 L158 110 Z"
+                      path="M58 86 Q64 74 80 76 Q80 84 82 92 L86 204 L74 204 L66 196 L58 146 L54 110 Z M142 86 Q136 74 120 76 Q120 84 118 92 L114 204 L126 204 L134 196 L142 146 L146 110 Z"
                     />
                   )}
-                  {/* Shoes — tapered ovals with a subtle heel lift. */}
+                  {/* Shoes — small ovals tucked under the pant hems. */}
                   {shoes && (
                     <>
                       <FigureGarment
                         item={shoes}
-                        path="M54 320 Q50 318 50 324 Q50 334 58 338 L86 340 Q96 340 96 332 Q96 322 92 318 Z"
+                        path="M73 320 Q69 319 69 324 Q69 332 76 334 L94 335 Q101 335 101 328 Q101 321 97 319 Z"
                       />
                       <FigureGarment
                         item={shoes}
-                        path="M146 320 Q150 318 150 324 Q150 334 142 338 L114 340 Q104 340 104 332 Q104 322 108 318 Z"
+                        path="M127 320 Q131 319 131 324 Q131 332 124 334 L106 335 Q99 335 99 328 Q99 321 103 319 Z"
                       />
                     </>
                   )}
@@ -484,7 +497,8 @@ export function MirrorScreen({
 
             <div className="mirror-actions">
               <button type="button" className="m-btn" onClick={saveOutfit}>
-                ♡ save
+                <span className="m-btn-glyph" aria-hidden="true">♡</span>
+                save
               </button>
               <button type="button" className="m-btn primary" onClick={commitOutfit}>
                 {primaryLabel}
@@ -492,6 +506,14 @@ export function MirrorScreen({
             </div>
           </div>
         </PhoneChrome>
+        {toast && (
+          <div className="mirror-toast" role="status">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12.5l4.5 4.5L19 7" />
+            </svg>
+            <span>{toast}</span>
+          </div>
+        )}
         <SnapNav current={current} onChange={onNav} />
       </div>
     </div>
