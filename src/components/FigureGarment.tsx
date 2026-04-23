@@ -8,8 +8,8 @@ import { useBlobUrl } from "../hooks/useBlobUrl";
  * The photo underneath already shows a person wearing their own clothes,
  * so we first lay down a soft neutral "paper" inside the garment silhouette
  * to hide that — then stack the selected garment (photo or flat color)
- * on top with a faint inner shadow so it reads as an overlaid dress-up
- * piece instead of paper glued onto a photo.
+ * on top, plus a gradient highlight and edge shadow so it reads as a
+ * dimensional dress-up piece instead of a flat cutout.
  */
 export function FigureGarment({
   item,
@@ -22,6 +22,7 @@ export function FigureGarment({
 }) {
   const clipId = useId();
   const shadowId = useId();
+  const highlightId = useId();
   const photoUrl = useBlobUrl(item.photo);
 
   return (
@@ -33,12 +34,18 @@ export function FigureGarment({
         <filter id={shadowId} x="-10%" y="-10%" width="120%" height="120%">
           <feGaussianBlur stdDeviation="0.6" />
         </filter>
+        {/* Soft diagonal highlight — cheap stand-in for cloth sheen. */}
+        <linearGradient id={highlightId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.28" />
+          <stop offset="0.45" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0.12" />
+        </linearGradient>
       </defs>
 
       {/* 1. Neutral "paper" underlay — wipes out the real outfit behind. */}
       <path d={path} fill="#faf5f1" />
 
-      {/* 2. The garment itself, either real photo or solid color. */}
+      {/* 2. The garment itself: photo clipped to path, or solid color. */}
       {photoUrl ? (
         <image
           href={photoUrl}
@@ -53,18 +60,21 @@ export function FigureGarment({
         <path d={path} fill={item.primaryColor} clipPath={`url(#${clipId})`} />
       )}
 
-      {/* 3. Soft inner shadow along the path edge so the garment has depth. */}
+      {/* 3. Cloth-sheen highlight/shadow gradient. */}
+      <path d={path} fill={`url(#${highlightId})`} clipPath={`url(#${clipId})`} />
+
+      {/* 4. Soft inner shadow along the edge for depth. */}
       <path
         d={path}
         fill="none"
         stroke="rgba(0,0,0,0.22)"
-        strokeWidth="1.2"
+        strokeWidth="1.4"
         strokeLinejoin="round"
         clipPath={`url(#${clipId})`}
         filter={`url(#${shadowId})`}
       />
 
-      {/* 4. Crisp outline. */}
+      {/* 5. Crisp outline. */}
       <path
         d={path}
         fill="none"
