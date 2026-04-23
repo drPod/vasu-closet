@@ -6,6 +6,7 @@ import { ItemThumbOf } from "../components/ItemThumb";
 import { PhoneChrome } from "../components/PhoneChrome";
 import { SnapNav, type ScreenKey } from "../components/SnapNav";
 import { FigureGarment } from "../components/FigureGarment";
+import { FigureBody } from "../components/FigureBody";
 import { WeatherIcon } from "../components/WeatherIcon";
 import { useBlobUrl } from "../hooks/useBlobUrl";
 import { desiredWarmth, isWarmthOff, itemSuitability } from "../lib/weather";
@@ -13,7 +14,6 @@ import { useDayForecast } from "../hooks/useWeather";
 
 type ShelfTab = "tops" | "bottoms" | "dresses" | "outer" | "shoes" | "layer";
 
-const ROTATE_LABELS = ["front", "side", "back"] as const;
 const TODAY = "2026-04-22";
 
 const DOW_LONG = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -93,7 +93,6 @@ export function MirrorScreen({
   const [outerId, setOuterId] = useState<string>();
   const [shoesId, setShoesId] = useState<string>();
   const [tab, setTab] = useState<ShelfTab>("tops");
-  const [rotate, setRotate] = useState(0);
   const [eventText, setEventText] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const flashToast = (msg: string) => {
@@ -353,26 +352,17 @@ export function MirrorScreen({
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => setRotate((r) => (r + 1) % 3)}
-                aria-label="rotate figure"
+              <div
                 style={{
                   width: 200,
                   height: 340,
                   position: "relative",
-                  background: "transparent",
-                  border: 0,
-                  padding: 0,
-                  cursor: "pointer",
                 }}
               >
                 {photoUrl ? (
                   <img src={photoUrl} alt="" className="mirror-photo" />
                 ) : (
-                  <div className="photo-placeholder">
-                    <div className="photo-placeholder-hint">your photo here</div>
-                  </div>
+                  <FigureBody />
                 )}
                 <svg
                   viewBox="0 0 200 340"
@@ -434,15 +424,6 @@ export function MirrorScreen({
                     </>
                   )}
                 </svg>
-              </button>
-
-              <div className="rotate-indicator">
-                <span>{ROTATE_LABELS[rotate]}</span>
-                <div className="rotate-dots">
-                  {ROTATE_LABELS.map((_, i) => (
-                    <div key={i} className={`rd${i === rotate ? " on" : ""}`} />
-                  ))}
-                </div>
               </div>
 
               <button

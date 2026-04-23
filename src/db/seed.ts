@@ -155,16 +155,6 @@ const PLAN_SEEDS: Plan[] = [
 
 let seedPromise: Promise<void> | null = null;
 
-async function fetchSamplePhoto(): Promise<Blob | undefined> {
-  try {
-    const res = await fetch("/sample-person.jpg");
-    if (!res.ok) return undefined;
-    return await res.blob();
-  } catch {
-    return undefined;
-  }
-}
-
 export function seedIfEmpty(): Promise<void> {
   // React StrictMode invokes effects twice in dev; share one seed across calls.
   if (seedPromise) return seedPromise;
@@ -185,13 +175,8 @@ export function seedIfEmpty(): Promise<void> {
       await db.items.bulkAdd(items);
       await db.outfits.bulkAdd(OUTFIT_SEEDS);
       await db.plans.bulkAdd(PLAN_SEEDS);
+      // No default photo — users upload their own via Profile.
       await db.profile.put({ id: "me", name: "vasu", handle: "@vasu" });
-    });
-
-    // Fetch the sample photo async — don't block the initial paint on it.
-    // useLiveQuery will pick up the update when it lands.
-    void fetchSamplePhoto().then((photo) => {
-      if (photo) void db.profile.update("me", { photo });
     });
   })();
   return seedPromise;
