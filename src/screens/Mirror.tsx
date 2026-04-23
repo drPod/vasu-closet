@@ -336,21 +336,21 @@ export function MirrorScreen({
             )}
 
             <div className="mirror-stage">
-              <div className="layers-strip" aria-label="layers">
-                {wearingDress ? (
+              {/* Layer strip — only surfaces when the user has actually stacked
+                   something under the top. Removes the dead empty "+" pip
+                   that users couldn't interact with. */}
+              {underTop && !wearingDress && (
+                <div className="layers-strip" aria-label="layers">
                   <div className="layer-pip">
-                    <ItemThumbOf item={dress!} />
+                    <ItemThumbOf item={underTop} />
                   </div>
-                ) : (
-                  <>
-                    <div className={`layer-pip${underTop ? "" : " empty"}`}>
-                      {underTop ? <ItemThumbOf item={underTop} /> : "+"}
+                  {top && (
+                    <div className="layer-pip">
+                      <ItemThumbOf item={top} />
                     </div>
-                    <div className="layer-pip">{top && <ItemThumbOf item={top} />}</div>
-                    <div className="layer-pip">{bot && <ItemThumbOf item={bot} />}</div>
-                  </>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               <div
                 style={{
