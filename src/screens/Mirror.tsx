@@ -27,6 +27,14 @@ function parsePlannedLabel(iso: string): { long: string; short: string } {
   return { long: `${long} · ${mon} ${dt.getDate()}`, short };
 }
 
+/** Human-friendly today label, derived at render time. */
+function todayLabel(): string {
+  const now = new Date();
+  const dow = DOW_LONG[now.getDay()];
+  const mon = now.toLocaleDateString("en", { month: "long" }).toLowerCase();
+  return `${dow} · ${mon} ${now.getDate()}`;
+}
+
 type Mode = "today" | "planning" | "review";
 
 export type MirrorPreset = {
@@ -286,8 +294,7 @@ export function MirrorScreen({
 
   const headerTitle =
     mode === "today" ? "The Mirror" : mode === "planning" ? "Planning" : "Log outfit";
-  const headerSub =
-    mode === "today" ? "tuesday · april 22" : plannedLabel?.long ?? "";
+  const headerSub = mode === "today" ? todayLabel() : plannedLabel?.long ?? "";
   const primaryLabel =
     mode === "today"
       ? "wear today"
