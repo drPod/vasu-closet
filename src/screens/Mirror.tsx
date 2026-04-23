@@ -312,7 +312,7 @@ export function MirrorScreen({
               >
                 {forecast ? (
                   <>
-                    <WeatherIcon code={forecast.code} size={14} />
+                    <WeatherIcon code={forecast.code} size={16} />
                     <span>
                       {forecast.temp}° · {forecast.note}
                     </span>
@@ -402,13 +402,13 @@ export function MirrorScreen({
                       {top && (
                         <FigureGarment
                           item={top}
-                          path="M72 82 Q82 74 96 76 L100 78 L104 76 Q118 74 128 82 L131 175 Q132 192 128 200 L72 200 Q68 192 69 175 Z"
+                          path="M72 82 Q82 74 96 76 L100 78 L104 76 Q118 74 128 82 L131 175 Q132 200 130 212 Q115 214 100 212 Q85 214 70 212 Q68 200 69 175 Z"
                         />
                       )}
                       {bot && (
                         <FigureGarment
                           item={bot}
-                          path="M72 200 L128 200 L130 228 L124 296 L118 326 L106 326 L104 232 L100 230 L96 232 L94 326 L82 326 L76 296 L70 228 Z"
+                          path="M70 206 L130 206 L132 236 L126 298 L118 322 L106 322 L104 238 L100 236 L96 238 L94 322 L82 322 L74 298 L68 236 Z"
                         />
                       )}
                     </>
@@ -420,16 +420,16 @@ export function MirrorScreen({
                       path="M58 86 Q64 74 80 76 Q80 84 82 92 L86 204 L74 204 L66 196 L58 146 L54 110 Z M142 86 Q136 74 120 76 Q120 84 118 92 L114 204 L126 204 L134 196 L142 146 L146 110 Z"
                     />
                   )}
-                  {/* Shoes — small ovals tucked under the pant hems. */}
+                  {/* Shoes — tapered ovals, large enough to read at a glance. */}
                   {shoes && (
                     <>
                       <FigureGarment
                         item={shoes}
-                        path="M73 320 Q69 319 69 324 Q69 332 76 334 L94 335 Q101 335 101 328 Q101 321 97 319 Z"
+                        path="M66 316 Q60 315 60 322 Q60 332 70 336 L92 338 Q100 338 100 330 Q100 318 94 316 Z"
                       />
                       <FigureGarment
                         item={shoes}
-                        path="M127 320 Q131 319 131 324 Q131 332 124 334 L106 335 Q99 335 99 328 Q99 321 103 319 Z"
+                        path="M134 316 Q140 315 140 322 Q140 332 130 336 L108 338 Q100 338 100 330 Q100 318 106 316 Z"
                       />
                     </>
                   )}
@@ -443,7 +443,6 @@ export function MirrorScreen({
                     <div key={i} className={`rd${i === rotate ? " on" : ""}`} />
                   ))}
                 </div>
-                <span style={{ opacity: 0.5 }}>tap to rotate</span>
               </div>
 
               <button

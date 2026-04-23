@@ -150,7 +150,21 @@ export function ClosetScreen({
           </header>
 
           <div className="closet-search" role="search">
-            <span style={{ opacity: 0.6 }} aria-hidden="true">⌕</span>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              style={{ opacity: 0.55, flexShrink: 0 }}
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
             <input
               type="text"
               placeholder="search your closet…"
