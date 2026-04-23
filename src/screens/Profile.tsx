@@ -4,8 +4,74 @@ import { db } from "../db/db";
 import { PhoneChrome } from "../components/PhoneChrome";
 import { SnapNav, type ScreenKey } from "../components/SnapNav";
 import { useBlobUrl } from "../hooks/useBlobUrl";
+import type { Pose } from "../db/schema";
 
 const WEEK_MS = 7 * 86_400_000;
+
+const POSES: { key: Pose; label: string; desc: string }[] = [
+  { key: "front", label: "front", desc: "facing the camera, arms at your sides" },
+  { key: "side", label: "side", desc: "profile view" },
+  { key: "back", label: "back", desc: "facing away" },
+];
+
+function BodyPhotoRow({ pose, label, desc }: { pose: Pose; label: string; desc: string }) {
+  const profile = useLiveQuery(() => db.profile.get("me"), []);
+  const blob =
+    pose === "front" ? profile?.photo : pose === "side" ? profile?.photoSide : profile?.photoBack;
+  const url = useBlobUrl(blob);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    const patch =
+      pose === "front" ? { photo: file } : pose === "side" ? { photoSide: file } : { photoBack: file };
+    await db.profile.update("me", patch);
+  };
+
+  const remove = async () => {
+    const patch =
+      pose === "front"
+        ? { photo: undefined }
+        : pose === "side"
+          ? { photoSide: undefined }
+          : { photoBack: undefined };
+    await db.profile.update("me", patch);
+  };
+
+  return (
+    <div className="body-photo-row">
+      <button
+        type="button"
+        className="body-photo-slot"
+        onClick={() => inputRef.current?.click()}
+        aria-label={`upload ${label} photo`}
+      >
+        {url ? (
+          <img src={url} alt="" />
+        ) : (
+          <span className="body-photo-empty">＋</span>
+        )}
+      </button>
+      <div className="body-photo-meta">
+        <div className="body-photo-label">{label}</div>
+        <div className="body-photo-desc">{desc}</div>
+        {url && (
+          <button type="button" className="body-photo-remove" onClick={remove}>
+            remove
+          </button>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        style={{ display: "none" }}
+        onChange={(e) => onFile(e.target.files?.[0])}
+      />
+    </div>
+  );
+}
 
 export function ProfileScreen({
   current,
@@ -18,17 +84,11 @@ export function ProfileScreen({
   const items = useLiveQuery(() => db.items.toArray(), []) ?? [];
   const outfits = useLiveQuery(() => db.outfits.count(), []) ?? 0;
   const avatarUrl = useBlobUrl(profile?.photo);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const now = Date.now();
   const wornThisWeek = items.filter(
     (i) => i.lastWornAt && now - i.lastWornAt < WEEK_MS,
   ).length;
-
-  const replacePhoto = async (file: File | undefined) => {
-    if (!file) return;
-    await db.profile.update("me", { photo: file });
-  };
 
   const resetApp = async () => {
     if (!confirm("reset the app? your closet, saves, and plans will be wiped.")) return;
@@ -85,34 +145,28 @@ export function ProfileScreen({
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button
-                type="button"
-                className="profile-row"
-                style={{ textAlign: "left", width: "100%" }}
-                onClick={() => photoInputRef.current?.click()}
-              >
-                <span>replace my photo</span>
-                <span className="chev">›</span>
-              </button>
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                capture="user"
-                style={{ display: "none" }}
-                onChange={(e) => replacePhoto(e.target.files?.[0])}
-              />
-              <button
-                type="button"
-                className="profile-row danger"
-                style={{ textAlign: "left", width: "100%" }}
-                onClick={resetApp}
-              >
-                <span>reset app · wipe all data</span>
-                <span className="chev">›</span>
-              </button>
-            </div>
+            <section className="profile-section">
+              <div className="profile-section-head">
+                <h2 className="profile-section-title">your photos</h2>
+                <div className="profile-section-desc">
+                  upload a front, side, and back view. the Mirror switches between
+                  them so you can try on outfits from every angle.
+                </div>
+              </div>
+              {POSES.map(({ key, label, desc }) => (
+                <BodyPhotoRow key={key} pose={key} label={label} desc={desc} />
+              ))}
+            </section>
+
+            <button
+              type="button"
+              className="profile-row danger"
+              style={{ textAlign: "left", width: "100%", marginTop: 6 }}
+              onClick={resetApp}
+            >
+              <span>reset app · wipe all data</span>
+              <span className="chev">›</span>
+            </button>
           </div>
         </div>
       </PhoneChrome>

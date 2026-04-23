@@ -26,6 +26,28 @@ export type Pattern = "stripe" | "floral";
 
 export type ItemKind = "top" | "bottom" | "dress" | "shoes" | "outer";
 
+/** View angle of the body / garment photo. */
+export type Pose = "front" | "side" | "back";
+
+/**
+ * Transform for a garment on the Mirror figure. Coordinates are % of
+ * the stage so the same layout works regardless of screen size.
+ *   - x,y: center of the garment as percentage of the stage (0-100)
+ *   - scale: multiplier on the garment's natural size (1 = default)
+ *   - rotation: degrees, clockwise
+ *   - flipX: mirror horizontally (useful for reusing front photo on side/back)
+ */
+export type Transform = {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  flipX?: boolean;
+};
+
+/** Per-pose layout stored on an item. Missing poses fall back to defaults. */
+export type Layout = Partial<Record<Pose, Transform>>;
+
 /** One row per garment in the user's closet. */
 export type Item = {
   id: string;
@@ -33,7 +55,11 @@ export type Item = {
   subkind: GarmentKind;
   primaryColor: string;
   pattern?: Pattern;
+  /** Primary cut-out photo (front view). */
   photo?: Blob;
+  /** Optional per-view garment photos. Falls back to `photo`. */
+  photoSide?: Blob;
+  photoBack?: Blob;
   thumb?: Blob;
   /** User-provided name. Falls back to subkind when absent. */
   name?: string;
@@ -41,6 +67,8 @@ export type Item = {
   warmth: 0 | 1 | 2 | 3;
   /** 0 casual · 1 smart · 2 dressy */
   formality: 0 | 1 | 2;
+  /** Per-pose positioning on the body, saved when the user drags it. */
+  layout?: Layout;
   lastWornAt?: number;
   wearCount: number;
   createdAt: number;
@@ -76,7 +104,11 @@ export type Plan = {
 /** Single-row table keyed by "me". */
 export type Profile = {
   id: "me";
+  /** Front-view body photo. Used by the Mirror stage and the profile avatar. */
   photo?: Blob;
+  /** Optional body photos from other angles. Mirror uses them per pose. */
+  photoSide?: Blob;
+  photoBack?: Blob;
   name?: string;
   handle?: string;
 };

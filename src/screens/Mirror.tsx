@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../db/db";
-import type { Item } from "../db/schema";
+import type { Item, Pose } from "../db/schema";
 import { ItemThumbOf } from "../components/ItemThumb";
 import { PhoneChrome } from "../components/PhoneChrome";
 import { SnapNav, type ScreenKey } from "../components/SnapNav";
-import { FigureGarment } from "../components/FigureGarment";
 import { FigureBody } from "../components/FigureBody";
+import { DraggableGarment } from "../components/DraggableGarment";
 import { WeatherIcon } from "../components/WeatherIcon";
 import { useBlobUrl } from "../hooks/useBlobUrl";
 import { desiredWarmth, isWarmthOff, itemSuitability } from "../lib/weather";
 import { useDayForecast } from "../hooks/useWeather";
+import { bodyPhotoForPose } from "../lib/layout";
 
 type ShelfTab = "tops" | "bottoms" | "dresses" | "outer" | "shoes" | "layer";
 
@@ -27,7 +28,6 @@ function parsePlannedLabel(iso: string): { long: string; short: string } {
   return { long: `${long} · ${mon} ${dt.getDate()}`, short };
 }
 
-/** Human-friendly today label, derived at render time. */
 function todayLabel(): string {
   const now = new Date();
   const dow = DOW_LONG[now.getDay()];
@@ -50,6 +50,8 @@ function modeFor(date: string): Mode {
   return date > TODAY ? "planning" : "review";
 }
 
+const POSE_OPTIONS: Pose[] = ["front", "side", "back"];
+
 export function MirrorScreen({
   current,
   onNav,
@@ -66,8 +68,6 @@ export function MirrorScreen({
   const targetDate = planningDate ?? TODAY;
   const mode: Mode = modeFor(targetDate);
   const forecast = useDayForecast(targetDate);
-  // When no forecast is available (past date, offline, etc.) fall back to a
-  // mild default so suitability scoring still works.
   const effectiveTemp = forecast?.temp ?? 68;
   const target = desiredWarmth(effectiveTemp);
 
@@ -92,8 +92,8 @@ export function MirrorScreen({
     [],
   );
   const profile = useLiveQuery(() => db.profile.get("me"), []);
-  const photoUrl = useBlobUrl(profile?.photo);
 
+  const [pose, setPose] = useState<Pose>("front");
   const [topId, setTopId] = useState<string>();
   const [underTopId, setUnderTopId] = useState<string>();
   const [botId, setBotId] = useState<string>();
@@ -103,13 +103,18 @@ export function MirrorScreen({
   const [tab, setTab] = useState<ShelfTab>("tops");
   const [eventText, setEventText] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [selectedGarment, setSelectedGarment] = useState<string | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+
   const flashToast = (msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 1400);
   };
 
-  // A Closet "try on" tap pipes a specific item in as the initial selection.
-  // When a preset is active it wins over the plan prefill.
+  const bodyBlob = bodyPhotoForPose(profile, pose);
+  const bodyUrl = useBlobUrl(bodyBlob);
+
+  // Closet preset takes precedence over plan prefill.
   useEffect(() => {
     if (!preset) return;
     if (preset.topId) {
@@ -125,7 +130,6 @@ export function MirrorScreen({
     if (preset.shoesId) setShoesId(preset.shoesId);
   }, [preset]);
 
-  // Prefill from the existing plan for this date (planning a day that already has something).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -143,7 +147,6 @@ export function MirrorScreen({
     };
   }, [targetDate, preset]);
 
-  // Fallback defaults if no plan.
   useEffect(() => {
     if (!topId && tops?.length) setTopId(tops[3]?.id ?? tops[0].id);
   }, [tops, topId]);
@@ -165,7 +168,6 @@ export function MirrorScreen({
     if (tab === "dresses") return dresses ?? [];
     if (tab === "outer") return outers ?? [];
     if (tab === "shoes") return shoesList ?? [];
-    // "layer" — a top worn under the main top
     return tops ?? [];
   }, [tab, tops, bottoms, dresses, outers, shoesList]);
 
@@ -187,7 +189,6 @@ export function MirrorScreen({
       setBotId(it.id);
       setDressId(undefined);
     } else if (tab === "dresses") {
-      // Tap again to unset; a dress replaces the separates visually.
       setDressId(it.id === dressId ? undefined : it.id);
     } else if (tab === "outer") {
       setOuterId(it.id === outerId ? undefined : it.id);
@@ -196,6 +197,7 @@ export function MirrorScreen({
     } else if (tab === "layer") {
       setUnderTopId(it.id === underTopId ? undefined : it.id);
     }
+    setSelectedGarment(it.id);
   };
 
   const wardrobeWarning = useMemo(() => {
@@ -302,6 +304,11 @@ export function MirrorScreen({
         ? `save for ${plannedLabel?.short ?? ""}`.trim()
         : `log for ${plannedLabel?.short ?? ""}`.trim();
 
+  // Garments rendered on the stage, back-to-front. Dress replaces separates.
+  const layers: Item[] = wearingDress
+    ? [dress!, shoes, outer].filter((x): x is Item => !!x)
+    : [underTop, bot, top, outer, shoes].filter((x): x is Item => !!x);
+
   return (
     <div className="mirror-root">
       <div className="mirror-phone">
@@ -342,95 +349,50 @@ export function MirrorScreen({
               />
             )}
 
-            <div className="mirror-stage">
-              {/* Layer strip — only surfaces when the user has actually stacked
-                   something under the top. Removes the dead empty "+" pip
-                   that users couldn't interact with. */}
-              {underTop && !wearingDress && (
-                <div className="layers-strip" aria-label="layers">
-                  <div className="layer-pip">
-                    <ItemThumbOf item={underTop} />
-                  </div>
-                  {top && (
-                    <div className="layer-pip">
-                      <ItemThumbOf item={top} />
-                    </div>
-                  )}
-                </div>
-              )}
+            <div
+              className="mirror-stage"
+              ref={stageRef}
+              onPointerDown={(e) => {
+                // Pointer-down on blank stage deselects any focused garment.
+                if (e.target === e.currentTarget) setSelectedGarment(null);
+              }}
+            >
+              {/* Pose switcher — chooses which body photo to show. */}
+              <div className="pose-switcher" role="tablist" aria-label="view">
+                {POSE_OPTIONS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="tab"
+                    aria-selected={pose === p}
+                    className={`pose-pill${pose === p ? " on" : ""}`}
+                    onClick={() => setPose(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
 
-              <div
-                style={{
-                  width: 200,
-                  height: 340,
-                  position: "relative",
-                }}
-              >
-                {photoUrl ? (
-                  <img src={photoUrl} alt="" className="mirror-photo" />
+              {/* Body canvas: either the user's photo for this pose or a
+                  stylized illustrated body as a paper-doll template. */}
+              <div className="mirror-canvas">
+                {bodyUrl ? (
+                  <img src={bodyUrl} alt="" className="mirror-photo" draggable={false} />
                 ) : (
                   <FigureBody />
                 )}
-                <svg
-                  viewBox="0 0 200 340"
-                  width="100%"
-                  height="100%"
-                  style={{ position: "absolute", inset: 0 }}
-                  aria-hidden="true"
-                >
-                  {/* Paths are tuned for a centered, head-to-feet portrait
-                       at this viewBox. They hug the body rather than
-                       spanning the full frame so real photos don't look
-                       engulfed by the overlay. */}
-                  {wearingDress ? (
-                    <FigureGarment
-                      item={dress!}
-                      path="M72 82 Q82 72 96 74 L100 76 L104 74 Q118 72 128 82 L135 178 Q148 280 150 312 L50 312 Q52 280 65 178 Z"
-                    />
-                  ) : (
-                    <>
-                      {underTop && (
-                        <FigureGarment
-                          item={underTop}
-                          path="M70 78 Q80 70 96 72 L100 74 L104 72 Q120 70 130 78 L134 180 L132 200 L68 200 L66 180 Z"
-                          opacity={0.9}
-                        />
-                      )}
-                      {top && (
-                        <FigureGarment
-                          item={top}
-                          path="M72 82 Q82 74 96 76 L100 78 L104 76 Q118 74 128 82 L131 175 Q132 200 130 212 Q115 214 100 212 Q85 214 70 212 Q68 200 69 175 Z"
-                        />
-                      )}
-                      {bot && (
-                        <FigureGarment
-                          item={bot}
-                          path="M70 206 L130 206 L132 236 L126 298 L118 322 L106 322 L104 238 L100 236 L96 238 L94 322 L82 322 L74 298 L68 236 Z"
-                        />
-                      )}
-                    </>
-                  )}
-                  {/* Outerwear — lapel panels framing the torso, narrower to sit over the top. */}
-                  {outer && (
-                    <FigureGarment
-                      item={outer}
-                      path="M58 86 Q64 74 80 76 Q80 84 82 92 L86 204 L74 204 L66 196 L58 146 L54 110 Z M142 86 Q136 74 120 76 Q120 84 118 92 L114 204 L126 204 L134 196 L142 146 L146 110 Z"
-                    />
-                  )}
-                  {/* Shoes — tapered ovals, large enough to read at a glance. */}
-                  {shoes && (
-                    <>
-                      <FigureGarment
-                        item={shoes}
-                        path="M66 316 Q60 315 60 322 Q60 332 70 336 L92 338 Q100 338 100 330 Q100 318 94 316 Z"
-                      />
-                      <FigureGarment
-                        item={shoes}
-                        path="M134 316 Q140 315 140 322 Q140 332 130 336 L108 338 Q100 338 100 330 Q100 318 106 316 Z"
-                      />
-                    </>
-                  )}
-                </svg>
+
+                {/* Garment layers — each draggable, positioned, scalable. */}
+                {layers.map((item) => (
+                  <DraggableGarment
+                    key={item.id}
+                    item={item}
+                    pose={pose}
+                    stageRef={stageRef}
+                    selected={selectedGarment === item.id}
+                    onSelect={() => setSelectedGarment(item.id)}
+                  />
+                ))}
               </div>
 
               <button
@@ -515,7 +477,14 @@ export function MirrorScreen({
         </PhoneChrome>
         {toast && (
           <div className="mirror-toast" role="status">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M5 12.5l4.5 4.5L19 7" />
             </svg>
             <span>{toast}</span>
