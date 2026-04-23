@@ -1128,6 +1128,9 @@ button { transition: transform 0.12s ease; }
   object-position: center 18%;
   border-radius: 12px;
   display: block;
+  /* Slightly mute the body photo so it reads as a canvas and the
+     chosen clothing overlay reads as the hero. */
+  filter: saturate(0.78) contrast(0.97);
 }
 
 /* ==== Mirror photo placeholder ==== */
