@@ -451,7 +451,21 @@ export function MirrorScreen({
                 onClick={surpriseMe}
                 aria-label="surprise me"
               >
-                ✨ surprise me
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: "#c88a8f" }}
+                >
+                  <path d="M12 3l1.8 4.8 4.8 1.8-4.8 1.8L12 16.2l-1.8-4.8L5.4 9.6l4.8-1.8z" />
+                  <path d="M19 3l.6 1.4 1.4.6-1.4.6L19 7l-.6-1.4L17 5l1.4-.6z" />
+                </svg>
+                surprise me
               </button>
             </div>
 

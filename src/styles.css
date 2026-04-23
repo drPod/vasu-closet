@@ -487,6 +487,18 @@ button { transition: transform 0.12s ease; }
   overflow-x: auto;
   padding-bottom: 2px;
   scrollbar-width: none;
+  mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
 }
 .closet-tabs::-webkit-scrollbar { display: none; }
 
@@ -1038,7 +1050,7 @@ button { transition: transform 0.12s ease; }
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(8px);
   border: 1px solid #ebe0d9;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 500;
@@ -1048,6 +1060,9 @@ button { transition: transform 0.12s ease; }
   box-shadow: 0 4px 12px -4px rgba(80, 50, 40, 0.18);
   letter-spacing: 0.02em;
   transition: transform 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .surprise-btn:active { transform: scale(0.96); }
 

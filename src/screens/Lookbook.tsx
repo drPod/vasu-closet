@@ -83,7 +83,18 @@ function LookCard({
             onClick={onDelete}
             aria-label="delete outfit"
           >
-            ⌫
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />
+            </svg>
           </button>
         )}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 140 }}>
