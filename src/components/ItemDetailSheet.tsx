@@ -1,10 +1,71 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { db } from "../db/db";
-import type { Item } from "../db/schema";
+import type { Item, Pose } from "../db/schema";
 import { ItemThumbOf } from "./ItemThumb";
+import { useBlobUrl } from "../hooks/useBlobUrl";
+import { removeBackground } from "../lib/bg-remove";
 
 const WARMTH_LABELS = ["cold", "cool", "warm", "hot"] as const;
 const FORMALITY_LABELS = ["casual", "smart", "dressy"] as const;
+
+const POSES: { key: Pose; label: string }[] = [
+  { key: "front", label: "front" },
+  { key: "side", label: "side" },
+  { key: "back", label: "back" },
+];
+
+function PhotoEditorSlot({
+  label,
+  blob,
+  onReplace,
+  onClear,
+}: {
+  label: string;
+  blob: Blob | undefined;
+  onReplace: (file: File) => void;
+  onClear: () => void;
+}) {
+  const url = useBlobUrl(blob);
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="photo-slot-col">
+      <button
+        type="button"
+        className={`photo-slot${blob ? " filled" : ""}`}
+        onClick={() => ref.current?.click()}
+        aria-label={`replace ${label} photo`}
+      >
+        {url ? <img src={url} alt="" /> : <span className="photo-slot-plus">＋</span>}
+      </button>
+      <div className="photo-slot-label">
+        {label}
+        {blob && (
+          <button
+            type="button"
+            className="photo-slot-clear"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+            }}
+          >
+            clear
+          </button>
+        )}
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onReplace(f);
+        }}
+      />
+    </div>
+  );
+}
 
 export function ItemDetailSheet({
   item,
@@ -17,6 +78,7 @@ export function ItemDetailSheet({
   const [warmth, setWarmth] = useState<Item["warmth"]>(item.warmth);
   const [formality, setFormality] = useState<Item["formality"]>(item.formality);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -36,6 +98,24 @@ export function ItemDetailSheet({
   const remove = async () => {
     await db.items.delete(item.id);
     onClose();
+  };
+
+  const replacePhoto = async (pose: Pose, file: File) => {
+    setBusy(true);
+    try {
+      const blob = await removeBackground(file).catch(() => file);
+      const field =
+        pose === "front" ? "photo" : pose === "side" ? "photoSide" : "photoBack";
+      await db.items.update(item.id, { [field]: blob });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const clearPhoto = async (pose: Pose) => {
+    const field =
+      pose === "front" ? "photo" : pose === "side" ? "photoSide" : "photoBack";
+    await db.items.update(item.id, { [field]: undefined });
   };
 
   return (
@@ -59,12 +139,31 @@ export function ItemDetailSheet({
             <ItemThumbOf item={item} />
           </div>
           <div style={{ flex: 1 }}>
-            <h2 style={{ marginBottom: 2 }}>{item.subkind}</h2>
+            <h2 style={{ marginBottom: 2 }}>{name || item.subkind}</h2>
             <div className="muted" style={{ margin: 0 }}>
               worn {item.wearCount} time{item.wearCount === 1 ? "" : "s"}
             </div>
           </div>
         </div>
+
+        <section className="sheet-section">
+          <div className="sheet-label">
+            photos{busy && <span className="photo-slot-req">·cutting out…</span>}
+          </div>
+          <div className="photo-slots-row">
+            {POSES.map(({ key, label }) => (
+              <PhotoEditorSlot
+                key={key}
+                label={label}
+                blob={
+                  key === "front" ? item.photo : key === "side" ? item.photoSide : item.photoBack
+                }
+                onReplace={(f) => replacePhoto(key, f)}
+                onClear={() => clearPhoto(key)}
+              />
+            ))}
+          </div>
+        </section>
 
         <section className="sheet-section">
           <div className="sheet-label">name</div>

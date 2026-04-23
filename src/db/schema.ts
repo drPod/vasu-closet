@@ -72,6 +72,8 @@ export type Item = {
   lastWornAt?: number;
   wearCount: number;
   createdAt: number;
+  /** True for seed / sample pieces so they can be bulk-removed. */
+  seed?: boolean;
 };
 
 /** A saved outfit. Can reference separates (top+bottom) or a single dress. */

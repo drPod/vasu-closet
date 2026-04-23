@@ -30,11 +30,6 @@ const SUBKINDS: SubkindOption[] = [
   { kind: "outer", sub: "coat", warmth: 3, formality: 1 },
 ];
 
-/**
- * Sample a handful of pixels near the center of an image Blob and return
- * the average color as a hex string. Used as a seed for `primaryColor` so
- * the garment's list thumb matches its real dominant tone.
- */
 async function extractPrimaryColor(blob: Blob): Promise<string> {
   const url = URL.createObjectURL(blob);
   try {
@@ -74,12 +69,16 @@ function PhotoSlot({
   label,
   blob,
   onPick,
+  onPickMany,
   required,
+  multiple,
 }: {
   label: string;
   blob: Blob | undefined;
   onPick: (file: File | undefined) => void;
+  onPickMany?: (files: File[]) => void;
   required?: boolean;
+  multiple?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const url = useBlobUrl(blob);
@@ -102,20 +101,34 @@ function PhotoSlot({
         type="file"
         accept="image/*"
         capture="environment"
+        multiple={multiple}
         style={{ display: "none" }}
-        onChange={(e) => onPick(e.target.files?.[0])}
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length > 1 && onPickMany) onPickMany(files);
+          else onPick(files[0]);
+        }}
       />
     </div>
   );
 }
 
 export function AddItemSheet({ onClose }: { onClose: () => void }) {
+  /**
+   * Two modes:
+   *   single — user picked 0 or 1 front photo; can also add side/back,
+   *            saves as one item.
+   *   bulk   — user picked 2+ front photos at once; saves as N items
+   *            sharing the chosen kind, no per-angle photos.
+   */
   const [photoFront, setPhotoFront] = useState<Blob | undefined>();
   const [photoSide, setPhotoSide] = useState<Blob | undefined>();
   const [photoBack, setPhotoBack] = useState<Blob | undefined>();
+  const [bulk, setBulk] = useState<File[] | null>(null);
   const [subIndex, setSubIndex] = useState<number | null>(null);
   const [cutoutBg, setCutoutBg] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -124,39 +137,63 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   const picked = subIndex != null ? SUBKINDS[subIndex] : undefined;
-  const canSave = !!photoFront && !!picked && !saving;
+  const hasAnyPhoto = !!photoFront || !!(bulk && bulk.length);
+  const canSave = hasAnyPhoto && !!picked && !saving;
 
   const cutout = (blob: Blob | undefined) =>
     blob && cutoutBg ? removeBackground(blob).catch(() => blob) : Promise.resolve(blob);
 
   const handleSave = async () => {
-    if (!photoFront || !picked) return;
+    if (!picked || !hasAnyPhoto) return;
     setSaving(true);
     try {
-      const [front, side, back] = await Promise.all([
-        cutout(photoFront),
-        cutout(photoSide),
-        cutout(photoBack),
-      ]);
-      const primaryColor = await extractPrimaryColor(front!).catch(() => "#c4a894");
       const now = Date.now();
-      const id = `u-${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-      await db.items.add({
-        id,
-        kind: picked.kind,
-        subkind: picked.sub,
-        primaryColor,
-        photo: front,
-        photoSide: side,
-        photoBack: back,
-        warmth: picked.warmth,
-        formality: picked.formality,
-        wearCount: 0,
-        createdAt: now,
-      });
+      if (bulk && bulk.length > 0) {
+        // Bulk mode: one item per file, no side/back.
+        for (let i = 0; i < bulk.length; i++) {
+          setProgress(`${cutoutBg ? "cutting out" : "saving"} ${i + 1}/${bulk.length}…`);
+          const front = await cutout(bulk[i]);
+          if (!front) continue;
+          const primaryColor = await extractPrimaryColor(front).catch(() => "#c4a894");
+          const id = `u-${(now + i).toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+          await db.items.add({
+            id,
+            kind: picked.kind,
+            subkind: picked.sub,
+            primaryColor,
+            photo: front,
+            warmth: picked.warmth,
+            formality: picked.formality,
+            wearCount: 0,
+            createdAt: now + i,
+          });
+        }
+      } else if (photoFront) {
+        const [front, side, back] = await Promise.all([
+          cutout(photoFront),
+          cutout(photoSide),
+          cutout(photoBack),
+        ]);
+        const primaryColor = await extractPrimaryColor(front!).catch(() => "#c4a894");
+        const id = `u-${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        await db.items.add({
+          id,
+          kind: picked.kind,
+          subkind: picked.sub,
+          primaryColor,
+          photo: front,
+          photoSide: side,
+          photoBack: back,
+          warmth: picked.warmth,
+          formality: picked.formality,
+          wearCount: 0,
+          createdAt: now,
+        });
+      }
       onClose();
     } finally {
       setSaving(false);
+      setProgress(null);
     }
   };
 
@@ -165,32 +202,57 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
       <div className="sheet-backdrop" onClick={onClose} aria-hidden="true" />
       <div className="sheet" role="dialog" aria-label="add a piece to your closet">
         <div className="sheet-grip" aria-hidden="true" />
-        <h2>add to your closet</h2>
+        <h2>{bulk ? `add ${bulk.length} pieces` : "add to your closet"}</h2>
         <div className="muted">
-          take a photo of the garment against a plain backdrop. add side/back
-          shots too if you want a truer fit across poses.
+          {bulk
+            ? "all of these will be tagged with the kind you pick below."
+            : "take a photo against a plain backdrop. add side/back too if you want a truer fit."}
         </div>
 
         <section className="sheet-section">
-          <div className="sheet-label">photos</div>
-          <div className="photo-slots-row">
-            <PhotoSlot
-              label="front"
-              blob={photoFront}
-              onPick={(f) => f && setPhotoFront(f)}
-              required
-            />
-            <PhotoSlot
-              label="side"
-              blob={photoSide}
-              onPick={(f) => f && setPhotoSide(f)}
-            />
-            <PhotoSlot
-              label="back"
-              blob={photoBack}
-              onPick={(f) => f && setPhotoBack(f)}
-            />
+          <div className="sheet-label">
+            {bulk ? `photos · ${bulk.length} selected` : "photos"}
           </div>
+
+          {bulk ? (
+            <div className="bulk-preview">
+              {bulk.slice(0, 8).map((f, i) => (
+                <BulkThumb key={i} file={f} />
+              ))}
+              {bulk.length > 8 && (
+                <div className="bulk-thumb more">+{bulk.length - 8}</div>
+              )}
+              <button
+                type="button"
+                className="bulk-clear"
+                onClick={() => setBulk(null)}
+                disabled={saving}
+              >
+                clear · add one at a time
+              </button>
+            </div>
+          ) : (
+            <div className="photo-slots-row">
+              <PhotoSlot
+                label="front"
+                blob={photoFront}
+                onPick={(f) => f && setPhotoFront(f)}
+                onPickMany={(files) => setBulk(files)}
+                multiple
+                required
+              />
+              <PhotoSlot
+                label="side"
+                blob={photoSide}
+                onPick={(f) => f && setPhotoSide(f)}
+              />
+              <PhotoSlot
+                label="back"
+                blob={photoBack}
+                onPick={(f) => f && setPhotoBack(f)}
+              />
+            </div>
+          )}
         </section>
 
         <section className="sheet-section">
@@ -250,8 +312,10 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
             {saving ? (
               <>
                 <span className="spinner" aria-hidden="true" />
-                {cutoutBg ? "cutting out…" : "saving…"}
+                {progress ?? (cutoutBg ? "cutting out…" : "saving…")}
               </>
+            ) : bulk ? (
+              `save ${bulk.length} pieces`
             ) : (
               "save to closet"
             )}
@@ -259,5 +323,14 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </>
+  );
+}
+
+function BulkThumb({ file }: { file: File }) {
+  const url = useBlobUrl(file);
+  return (
+    <div className="bulk-thumb">
+      {url ? <img src={url} alt="" /> : null}
+    </div>
   );
 }

@@ -169,6 +169,7 @@ export function seedIfEmpty(): Promise<void> {
       wearCount: 0,
       // Stagger so queries sorted by createdAt preserve seed order.
       createdAt: NOW - (ITEM_SEEDS.length - i) * 1000,
+      seed: true,
     }));
 
     await db.transaction("rw", db.items, db.outfits, db.plans, db.profile, async () => {

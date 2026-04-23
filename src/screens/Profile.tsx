@@ -5,6 +5,7 @@ import { PhoneChrome } from "../components/PhoneChrome";
 import { SnapNav, type ScreenKey } from "../components/SnapNav";
 import { useBlobUrl } from "../hooks/useBlobUrl";
 import type { Pose } from "../db/schema";
+import { WeatherIcon } from "../components/WeatherIcon";
 
 const WEEK_MS = 7 * 86_400_000;
 
@@ -83,6 +84,7 @@ export function ProfileScreen({
   const profile = useLiveQuery(() => db.profile.get("me"), []);
   const items = useLiveQuery(() => db.items.toArray(), []) ?? [];
   const outfits = useLiveQuery(() => db.outfits.count(), []) ?? 0;
+  const weather = useLiveQuery(() => db.weather.get("me"), []);
   const avatarUrl = useBlobUrl(profile?.photo);
 
   const now = Date.now();
@@ -94,6 +96,21 @@ export function ProfileScreen({
     if (!confirm("reset the app? your closet, saves, and plans will be wiped.")) return;
     await db.delete();
     location.reload();
+  };
+
+  const clearSamples = async () => {
+    const count = await db.items.filter((i) => !!i.seed).count();
+    if (count === 0) {
+      alert("no sample pieces to remove. your closet is all yours.");
+      return;
+    }
+    if (
+      !confirm(
+        `remove the ${count} sample pieces? your uploads stay put. you can bring samples back with reset app.`,
+      )
+    )
+      return;
+    await db.items.filter((i) => !!i.seed).delete();
   };
 
   return (
@@ -158,10 +175,33 @@ export function ProfileScreen({
               ))}
             </section>
 
+            {weather && (
+              <div className="weather-source-chip">
+                {weather.days[0] && (
+                  <WeatherIcon code={weather.days[0].code} size={14} />
+                )}
+                <span>
+                  weather ·{" "}
+                  {weather.source === "gps"
+                    ? "your location"
+                    : "Los Angeles (default — grant location for yours)"}
+                </span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="profile-row"
+              style={{ textAlign: "left", width: "100%", marginTop: 6 }}
+              onClick={clearSamples}
+            >
+              <span>clear sample pieces · keep my uploads</span>
+              <span className="chev">›</span>
+            </button>
             <button
               type="button"
               className="profile-row danger"
-              style={{ textAlign: "left", width: "100%", marginTop: 6 }}
+              style={{ textAlign: "left", width: "100%" }}
               onClick={resetApp}
             >
               <span>reset app · wipe all data</span>
