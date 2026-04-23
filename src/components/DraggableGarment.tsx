@@ -155,6 +155,11 @@ export function DraggableGarment({
   const toggleFlip = () => persist({ ...saved, flipX: !saved.flipX });
   const resetTransform = () =>
     persist({ ...saved, x: 50, y: current.y, scale: 1, rotation: 0, flipX: false });
+  /** Copy the current pose's transform to the other two poses. */
+  const applyToAllPoses = async () => {
+    const layout = { front: saved, side: saved, back: saved };
+    await db.items.update(item.id, { layout });
+  };
 
   useEffect(() => {
     if (!selected && pending) {
@@ -197,6 +202,14 @@ export function DraggableGarment({
           <button type="button" aria-label="rotate left" onClick={() => rotateBy(-15)}>↺</button>
           <button type="button" aria-label="rotate right" onClick={() => rotateBy(15)}>↻</button>
           <button type="button" aria-label="flip" onClick={toggleFlip}>⇄</button>
+          <button
+            type="button"
+            aria-label="apply this layout to all poses"
+            title="apply this layout to side + back"
+            onClick={applyToAllPoses}
+          >
+            all
+          </button>
           <button type="button" aria-label="reset" onClick={resetTransform}>reset</button>
         </div>
       )}
