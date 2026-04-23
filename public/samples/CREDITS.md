@@ -1,14 +1,15 @@
 # Sample garment photos
 
 These are used to bootstrap the demo closet so a first-time visitor sees real
-clothes instead of abstract silhouettes. All photos are free from Unsplash
-(commercial use, no attribution required — credit given anyway below).
+cut-out garments on the Mirror, not abstract silhouettes. All source photos
+are free from Unsplash (commercial use, no attribution required — credit
+given anyway below). Backgrounds were knocked out locally with ImageMagick
+(`-fuzz -transparent`) before shipping so the flood-fill inside the app
+doesn't have to touch them.
 
-- `tee-white.jpg` — Cam Morin, Unsplash photo `photo-1581655353564-df123a1eb820`
-- `tee-black.jpg` — Etty Fidele, Unsplash photo `photo-1583744946564-b52ac1c389c8`
-- `knit-white.jpg` — Ayo Ogunseinde, Unsplash photo `photo-1620799140408-edc6dcb6d633`
-- `jeans-dark.jpg` — charlesdeluvio, Unsplash photo `photo-1624378439575-d8705ad7ae80`
-- `shorts-denim.jpg` — Hamed Daram, Unsplash photo `photo-1591195853828-11db59a44f6b`
-- `dress-plum.jpg` — Jonathan Borba, Unsplash photo `photo-1566174053879-31528523f8ae`
+- `tee-kiikii.png` — Etty Fidele, Unsplash `photo-1576566588028-4147f3842f27`
+- `polo-green.png` — Unsplash `photo-1586363104862-3a5e2ab60d99` (cropped)
+- `polo-coral.png` — Unsplash `photo-1586363104862-3a5e2ab60d99` (cropped)
+- `shorts-denim.png` — Hamed Daram, Unsplash `photo-1591195853828-11db59a44f6b`
 
-Replaced by the user as they upload their own closet via the app's intake flow.
+Replaced by the user as they upload their own closet via intake.
