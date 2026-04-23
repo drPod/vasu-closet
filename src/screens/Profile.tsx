@@ -56,7 +56,7 @@ export function ProfileScreen({
                     ? {
                         backgroundImage: `url(${avatarUrl})`,
                         backgroundSize: "cover",
-                        backgroundPosition: "center 18%",
+                        backgroundPosition: "center 4%",
                       }
                     : undefined
                 }

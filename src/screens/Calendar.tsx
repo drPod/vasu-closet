@@ -20,6 +20,18 @@ function parseDate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d, 12, 0, 0);
 }
+
+/** Best-guess WMO code from a seeded weatherNote string so past days get an icon. */
+function inferCodeFromNote(note: string | undefined): number | null {
+  if (!note) return null;
+  const n = note.toLowerCase();
+  if (n.includes("sunny") || n.includes("clear")) return 0;
+  if (n.includes("rain") || n.includes("shower")) return 61;
+  if (n.includes("snow")) return 71;
+  if (n.includes("thunder")) return 95;
+  if (n.includes("fog")) return 45;
+  return 2; // default: partly cloudy
+}
 function isoOf(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -169,6 +181,9 @@ export function CalendarScreen({
               const weatherLabel = dayWx
                 ? `${dayWx.temp}° · ${dayWx.note}`
                 : plan?.weatherNote ?? "";
+              // Pick an icon even for past days (no forecast) so the weather
+              // line looks consistent. Infer roughly from the weather note text.
+              const fallbackCode = inferCodeFromNote(plan?.weatherNote);
 
               const cls =
                 "cal-day" +
@@ -200,9 +215,9 @@ export function CalendarScreen({
                     <div className="cal-day-meta">
                       <div className="cal-day-event">{plan?.event ?? ""}</div>
                       <div className="cal-day-weather">
-                        {dayWx && (
+                        {(dayWx || fallbackCode !== null) && (
                           <span style={{ marginRight: 4, verticalAlign: "text-bottom" }}>
-                            <WeatherIcon code={dayWx.code} size={11} />
+                            <WeatherIcon code={dayWx?.code ?? fallbackCode ?? 2} size={11} />
                           </span>
                         )}
                         {weatherLabel}
