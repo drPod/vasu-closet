@@ -225,28 +225,16 @@ export function CalendarScreen({
                       {status === "empty" && (
                         <div className="cal-day-empty-cta">plan an outfit</div>
                       )}
-                      {status === "planned" && (
-                        <div
-                          className="cal-day-weather"
-                          style={{ color: "#c88a8f", fontWeight: 500 }}
-                        >
-                          · planned
-                        </div>
-                      )}
-                      {status === "today" && (
-                        <div
-                          className="cal-day-weather"
-                          style={{ color: "#c88a8f", fontWeight: 500 }}
-                        >
-                          · wearing now
-                        </div>
-                      )}
-                      {status === "worn" && (
-                        <div className="cal-day-weather" style={{ opacity: 0.7 }}>
-                          · worn
-                        </div>
-                      )}
                     </div>
+                    {status !== "empty" && (
+                      <div className={`cal-day-chip chip-${status}`}>
+                        {status === "today"
+                          ? "now"
+                          : status === "planned"
+                            ? "planned"
+                            : "worn"}
+                      </div>
+                    )}
                   </div>
                 </button>
               );

@@ -796,6 +796,33 @@ button { transition: transform 0.12s ease; }
   font-family: "Fraunces", serif;
 }
 
+.cal-day-chip {
+  align-self: center;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.cal-day-chip.chip-today {
+  background: #c88a8f;
+  color: #ffffff;
+}
+.cal-day-chip.chip-planned {
+  background: #f2dcdd;
+  color: #8a5050;
+}
+.cal-day-chip.chip-worn {
+  background: #ebe0d9;
+  color: #6b5956;
+}
+.cal-day-chip.chip-past {
+  background: #ebe0d9;
+  color: #6b5956;
+}
+
 .cal-plus {
   width: 52px;
   height: 68px;
@@ -1106,9 +1133,6 @@ button { transition: transform 0.12s ease; }
   object-position: center 18%;
   border-radius: 12px;
   display: block;
-  /* Slightly mute the body photo so it reads as a canvas and the
-     chosen clothing overlay reads as the hero. */
-  filter: saturate(0.78) contrast(0.97);
 }
 
 
