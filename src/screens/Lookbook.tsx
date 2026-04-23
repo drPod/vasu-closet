@@ -5,6 +5,7 @@ import type { Item, Outfit } from "../db/schema";
 import { ItemThumbOf } from "../components/ItemThumb";
 import { PhoneChrome } from "../components/PhoneChrome";
 import { SnapNav, type ScreenKey } from "../components/SnapNav";
+import { useSwipe } from "../hooks/useSwipe";
 
 const TODAY = "2026-04-22";
 
@@ -30,14 +31,46 @@ function LookCard({
   state,
   view,
   onDelete,
+  dragDx = 0,
+  dragging = false,
+  swipeBindings,
 }: {
   state: CardState;
   view: OutfitView;
   onDelete?: () => void;
+  dragDx?: number;
+  dragging?: boolean;
+  swipeBindings?: React.HTMLAttributes<HTMLDivElement>;
 }) {
   const { outfit, top, bot, dress, underTop } = view;
+  // Front-card drag: translate + rotate by drag offset, ease opacity based on magnitude.
+  const dragStyle: React.CSSProperties | undefined =
+    state === "front" && dragging
+      ? {
+          transform: `translateX(${dragDx}px) rotate(${dragDx / 18}deg)`,
+          transition: "none",
+          zIndex: 5,
+        }
+      : state === "front" && !dragging && dragDx !== 0
+        ? {
+            transform: "translateX(0) rotate(0)",
+            transition: "transform 0.25s ease-out",
+          }
+        : undefined;
+  const tint =
+    state === "front" && dragging
+      ? dragDx > 40
+        ? "right"
+        : dragDx < -40
+          ? "left"
+          : null
+      : null;
   return (
-    <div className={`look-card ${state}`}>
+    <div
+      className={`look-card ${state}${tint ? ` tint-${tint}` : ""}`}
+      style={dragStyle}
+      {...(state === "front" ? swipeBindings : {})}
+    >
       <div className="look-photo">
         {outfit.tag && <div className="look-tag">{outfit.tag}</div>}
         <div className="look-heart" aria-hidden="true">
@@ -138,6 +171,15 @@ export function LookbookScreen({
     setConfirmingDelete(false);
   };
 
+  const swipe = useSwipe({
+    onSwipeLeft: onNope,
+    onSwipeRight: async () => {
+      if (!front) return;
+      await db.outfits.update(front.outfit.id, { favorite: true });
+      advance();
+    },
+  });
+
   const onDelete = async () => {
     if (!front) return;
     if (!confirmingDelete) {
@@ -200,7 +242,14 @@ export function LookbookScreen({
                 <div className="card-stack">
                   {back3 && <LookCard state="back-3" view={back3} />}
                   {back2 && <LookCard state="back-2" view={back2} />}
-                  <LookCard state="front" view={front} onDelete={onDelete} />
+                  <LookCard
+                    state="front"
+                    view={front}
+                    onDelete={onDelete}
+                    dragDx={swipe.dx}
+                    dragging={swipe.dragging}
+                    swipeBindings={swipe.bindings}
+                  />
                 </div>
                 {confirmingDelete && (
                   <div className="delete-confirm">tap delete again to remove this look</div>

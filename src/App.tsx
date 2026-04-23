@@ -44,6 +44,8 @@ export function App() {
     if (item.kind === "top") p.topId = item.id;
     else if (item.kind === "bottom") p.botId = item.id;
     else if (item.kind === "dress") p.dressId = item.id;
+    else if (item.kind === "outer") p.outerId = item.id;
+    else if (item.kind === "shoes") p.shoesId = item.id;
     setPreset(p);
     setPlanningDate(null);
     setScreen("mirror");

@@ -10,7 +10,7 @@ import { useBlobUrl } from "../hooks/useBlobUrl";
 import { desiredWarmth, isWarmthOff, itemSuitability } from "../lib/weather";
 import { useDayForecast } from "../hooks/useWeather";
 
-type ShelfTab = "tops" | "bottoms" | "dresses" | "layer";
+type ShelfTab = "tops" | "bottoms" | "dresses" | "outer" | "shoes" | "layer";
 
 const ROTATE_LABELS = ["front", "side", "back"] as const;
 const TODAY = "2026-04-22";
@@ -32,6 +32,8 @@ export type MirrorPreset = {
   topId?: string;
   botId?: string;
   dressId?: string;
+  outerId?: string;
+  shoesId?: string;
 };
 
 function modeFor(date: string): Mode {
@@ -72,6 +74,14 @@ export function MirrorScreen({
     () => db.items.where("kind").equals("dress").sortBy("createdAt"),
     [],
   );
+  const outers = useLiveQuery(
+    () => db.items.where("kind").equals("outer").sortBy("createdAt"),
+    [],
+  );
+  const shoesList = useLiveQuery(
+    () => db.items.where("kind").equals("shoes").sortBy("createdAt"),
+    [],
+  );
   const profile = useLiveQuery(() => db.profile.get("me"), []);
   const photoUrl = useBlobUrl(profile?.photo);
 
@@ -79,8 +89,11 @@ export function MirrorScreen({
   const [underTopId, setUnderTopId] = useState<string>();
   const [botId, setBotId] = useState<string>();
   const [dressId, setDressId] = useState<string>();
+  const [outerId, setOuterId] = useState<string>();
+  const [shoesId, setShoesId] = useState<string>();
   const [tab, setTab] = useState<ShelfTab>("tops");
   const [rotate, setRotate] = useState(0);
+  const [eventText, setEventText] = useState("");
 
   // A Closet "try on" tap pipes a specific item in as the initial selection.
   // When a preset is active it wins over the plan prefill.
@@ -95,18 +108,22 @@ export function MirrorScreen({
       setDressId(undefined);
     }
     if (preset.dressId) setDressId(preset.dressId);
+    if (preset.outerId) setOuterId(preset.outerId);
+    if (preset.shoesId) setShoesId(preset.shoesId);
   }, [preset]);
 
   // Prefill from the existing plan for this date (planning a day that already has something).
   useEffect(() => {
-    if (preset) return;
     let cancelled = false;
     (async () => {
       const plan = await db.plans.get(targetDate);
       if (cancelled) return;
-      if (plan?.topId) setTopId(plan.topId);
-      if (plan?.bottomId) setBotId(plan.bottomId);
-      if (plan?.dressId) setDressId(plan.dressId);
+      if (!preset) {
+        if (plan?.topId) setTopId(plan.topId);
+        if (plan?.bottomId) setBotId(plan.bottomId);
+        if (plan?.dressId) setDressId(plan.dressId);
+      }
+      setEventText(plan?.event ?? "");
     })();
     return () => {
       cancelled = true;
@@ -125,20 +142,26 @@ export function MirrorScreen({
   const bot = bottoms?.find((i) => i.id === botId);
   const underTop = tops?.find((i) => i.id === underTopId);
   const dress = dresses?.find((i) => i.id === dressId);
+  const outer = outers?.find((i) => i.id === outerId);
+  const shoes = shoesList?.find((i) => i.id === shoesId);
   const wearingDress = !!dress;
 
   const list: Item[] = useMemo(() => {
     if (tab === "tops") return tops ?? [];
     if (tab === "bottoms") return bottoms ?? [];
     if (tab === "dresses") return dresses ?? [];
+    if (tab === "outer") return outers ?? [];
+    if (tab === "shoes") return shoesList ?? [];
     // "layer" — a top worn under the main top
     return tops ?? [];
-  }, [tab, tops, bottoms, dresses]);
+  }, [tab, tops, bottoms, dresses, outers, shoesList]);
 
   const isSelected = (it: Item) => {
     if (tab === "tops") return top?.id === it.id;
     if (tab === "bottoms") return bot?.id === it.id;
     if (tab === "dresses") return dress?.id === it.id;
+    if (tab === "outer") return outer?.id === it.id;
+    if (tab === "shoes") return shoes?.id === it.id;
     if (tab === "layer") return underTop?.id === it.id;
     return false;
   };
@@ -153,6 +176,10 @@ export function MirrorScreen({
     } else if (tab === "dresses") {
       // Tap again to unset; a dress replaces the separates visually.
       setDressId(it.id === dressId ? undefined : it.id);
+    } else if (tab === "outer") {
+      setOuterId(it.id === outerId ? undefined : it.id);
+    } else if (tab === "shoes") {
+      setShoesId(it.id === shoesId ? undefined : it.id);
     } else if (tab === "layer") {
       setUnderTopId(it.id === underTopId ? undefined : it.id);
     }
@@ -161,7 +188,9 @@ export function MirrorScreen({
   const wardrobeWarning = useMemo(() => {
     const tooHot: Item[] = [];
     const tooLight: Item[] = [];
-    const picks = wearingDress ? [dress] : [top, bot, underTop];
+    const picks = wearingDress
+      ? [dress, outer, shoes]
+      : [top, bot, underTop, outer, shoes];
     picks.forEach((it) => {
       if (!it || !isWarmthOff(it, target)) return;
       if (it.warmth > target) tooHot.push(it);
@@ -170,7 +199,7 @@ export function MirrorScreen({
     if (tooHot.length) return `that's toasty for ${effectiveTemp}° out`;
     if (tooLight.length) return `you'll be chilly · ${effectiveTemp}°`;
     return null;
-  }, [top, bot, underTop, dress, wearingDress, target, effectiveTemp]);
+  }, [top, bot, underTop, dress, outer, shoes, wearingDress, target, effectiveTemp]);
 
   const surpriseMe = () => {
     const rank = (it: Item) => itemSuitability(it, target);
@@ -230,7 +259,7 @@ export function MirrorScreen({
       await db.plans.put({
         id: targetDate,
         date: targetDate,
-        event: existing?.event,
+        event: eventText.trim() || existing?.event,
         weatherNote: liveWeatherNote ?? existing?.weatherNote,
         topId: wearingDress ? undefined : top?.id,
         bottomId: wearingDress ? undefined : bot?.id,
@@ -286,6 +315,17 @@ export function MirrorScreen({
             </header>
 
             {wardrobeWarning && <div className="warn-banner">⚠ {wardrobeWarning}</div>}
+
+            {mode !== "today" && (
+              <input
+                type="text"
+                className="event-input"
+                placeholder="what's happening? (e.g. brunch, class, date)"
+                value={eventText}
+                onChange={(e) => setEventText(e.target.value)}
+                aria-label="event for this day"
+              />
+            )}
 
             <div className="mirror-stage">
               <div className="layers-strip" aria-label="layers">
@@ -360,6 +400,26 @@ export function MirrorScreen({
                       )}
                     </>
                   )}
+                  {/* Outerwear — open jacket panels sitting over the torso / hip area. */}
+                  {outer && (
+                    <FigureGarment
+                      item={outer}
+                      path="M42 66 Q50 58 60 60 L78 66 L82 200 L62 200 L54 170 L46 100 Z M158 66 Q150 58 140 60 L122 66 L118 200 L138 200 L146 170 L154 100 Z"
+                    />
+                  )}
+                  {/* Shoes — two ovals at the feet. */}
+                  {shoes && (
+                    <>
+                      <FigureGarment
+                        item={shoes}
+                        path="M60 322 Q54 320 52 326 Q52 334 58 336 L84 338 Q92 338 92 330 L90 322 Z"
+                      />
+                      <FigureGarment
+                        item={shoes}
+                        path="M140 322 Q146 320 148 326 Q148 334 142 336 L116 338 Q108 338 108 330 L110 322 Z"
+                      />
+                    </>
+                  )}
                 </svg>
               </button>
 
@@ -385,7 +445,16 @@ export function MirrorScreen({
 
             <div className="mirror-shelf">
               <div className="shelf-tabs" role="tablist">
-                {(["tops", "bottoms", "dresses", "layer"] as ShelfTab[]).map((t) => (
+                {(
+                  [
+                    "tops",
+                    "bottoms",
+                    "dresses",
+                    ...((outers?.length ?? 0) > 0 ? (["outer"] as ShelfTab[]) : []),
+                    ...((shoesList?.length ?? 0) > 0 ? (["shoes"] as ShelfTab[]) : []),
+                    "layer",
+                  ] as ShelfTab[]
+                ).map((t) => (
                   <button
                     key={t}
                     type="button"

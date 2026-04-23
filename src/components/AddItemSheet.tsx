@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { db } from "../db/db";
 import type { GarmentKind, Item, ItemKind } from "../db/schema";
 import { useBlobUrl } from "../hooks/useBlobUrl";
+import { removeBackground } from "../lib/bg-remove";
 
 type SubkindOption = { kind: ItemKind; sub: GarmentKind; warmth: Item["warmth"]; formality: Item["formality"] };
 
@@ -72,6 +73,7 @@ async function extractPrimaryColor(blob: Blob): Promise<string> {
 export function AddItemSheet({ onClose }: { onClose: () => void }) {
   const [photo, setPhoto] = useState<Blob | undefined>();
   const [subIndex, setSubIndex] = useState<number | null>(null);
+  const [cutoutBg, setCutoutBg] = useState(true);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const previewUrl = useBlobUrl(photo);
@@ -94,7 +96,10 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
     if (!photo || !picked) return;
     setSaving(true);
     try {
-      const primaryColor = await extractPrimaryColor(photo).catch(() => "#c4a894");
+      const finalPhoto = cutoutBg
+        ? await removeBackground(photo).catch(() => photo)
+        : photo;
+      const primaryColor = await extractPrimaryColor(finalPhoto).catch(() => "#c4a894");
       const now = Date.now();
       const id = `u-${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
       await db.items.add({
@@ -102,7 +107,7 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
         kind: picked.kind,
         subkind: picked.sub,
         primaryColor,
-        photo,
+        photo: finalPhoto,
         warmth: picked.warmth,
         formality: picked.formality,
         wearCount: 0,
@@ -162,6 +167,17 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="sheet-section">
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={cutoutBg}
+              onChange={(e) => setCutoutBg(e.target.checked)}
+            />
+            <span>✂️ cut out background (best on plain backdrops)</span>
+          </label>
         </section>
 
         <div className="sheet-actions">

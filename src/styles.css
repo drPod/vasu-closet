@@ -803,7 +803,28 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   opacity: 0.45;
   z-index: 0;
 }
-.look-card.front { z-index: 2; }
+.look-card.front {
+  z-index: 2;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.look-card.front:active { cursor: grabbing; }
+.look-card.tint-left::after,
+.look-card.tint-right::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 20px;
+}
+.look-card.tint-left::after {
+  background: rgba(42, 31, 28, 0.12);
+}
+.look-card.tint-right::after {
+  background: rgba(200, 138, 143, 0.16);
+}
 
 .look-photo {
   flex: 1;
@@ -903,6 +924,24 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   color: #8a5040;
   background: #fbeee6;
 }
+
+.event-input {
+  align-self: stretch;
+  padding: 8px 14px;
+  border: 1px solid #ebe0d9;
+  background: #faf5f1;
+  color: #2a1f1c;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  margin-bottom: 8px;
+}
+.event-input:focus {
+  background: #fff;
+  border-color: #c88a8f;
+}
+.event-input::placeholder { color: #a89a97; }
 
 .warn-banner {
   align-self: center;
@@ -1176,6 +1215,20 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   gap: 8px;
   margin-top: 14px;
 }
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #ebe0d9;
+  background: #faf5f1;
+  border-radius: 14px;
+  font-size: 12px;
+  color: #2a1f1c;
+  cursor: pointer;
+}
+.toggle-row input { accent-color: #c88a8f; }
 
 /* ==== Profile screen (simple) ==== */
 
