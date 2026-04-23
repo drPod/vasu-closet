@@ -181,13 +181,17 @@ export function seedIfEmpty(): Promise<void> {
       createdAt: NOW - (ITEM_SEEDS.length - i) * 1000,
     }));
 
-    const photo = await fetchSamplePhoto();
-
     await db.transaction("rw", db.items, db.outfits, db.plans, db.profile, async () => {
       await db.items.bulkAdd(items);
       await db.outfits.bulkAdd(OUTFIT_SEEDS);
       await db.plans.bulkAdd(PLAN_SEEDS);
-      await db.profile.put({ id: "me", name: "vasu", handle: "@vasu", photo });
+      await db.profile.put({ id: "me", name: "vasu", handle: "@vasu" });
+    });
+
+    // Fetch the sample photo async — don't block the initial paint on it.
+    // useLiveQuery will pick up the update when it lands.
+    void fetchSamplePhoto().then((photo) => {
+      if (photo) void db.profile.update("me", { photo });
     });
   })();
   return seedPromise;
