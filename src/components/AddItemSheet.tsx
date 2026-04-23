@@ -176,12 +176,28 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
               checked={cutoutBg}
               onChange={(e) => setCutoutBg(e.target.checked)}
             />
-            <span>✂️ cut out background (best on plain backdrops)</span>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              style={{ color: "var(--accent)", flexShrink: 0 }}
+            >
+              <circle cx="6" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12" />
+            </svg>
+            <span>cut out background (best on plain backdrops)</span>
           </label>
         </section>
 
         <div className="sheet-actions">
-          <button type="button" className="m-btn" onClick={onClose}>
+          <button type="button" className="m-btn" onClick={onClose} disabled={saving}>
             cancel
           </button>
           <button
@@ -191,7 +207,14 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
             disabled={!canSave}
             style={canSave ? undefined : { opacity: 0.5, cursor: "not-allowed" }}
           >
-            {saving ? "saving…" : "save to closet"}
+            {saving ? (
+              <>
+                <span className="spinner" aria-hidden="true" />
+                {cutoutBg ? "cutting out…" : "saving…"}
+              </>
+            ) : (
+              "save to closet"
+            )}
           </button>
         </div>
       </div>

@@ -272,6 +272,22 @@ button { transition: transform 0.12s ease; }
 }
 .shelf-grid.scrollable::-webkit-scrollbar { display: none; }
 
+.shelf-hint {
+  font-size: 11px;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.shelf-hint em {
+  color: var(--accent);
+  font-style: italic;
+  font-family: "Fraunces", serif;
+  font-weight: 500;
+}
+
 .item-card {
   aspect-ratio: 1;
   background: var(--surface-2);
@@ -1284,6 +1300,17 @@ button { transition: transform 0.12s ease; }
   cursor: pointer;
 }
 .toggle-row input { accent-color: #c88a8f; }
+
+@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
 
 /* ==== Profile screen (simple) ==== */
 

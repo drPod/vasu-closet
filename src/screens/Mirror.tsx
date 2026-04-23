@@ -481,6 +481,12 @@ export function MirrorScreen({
                   </button>
                 ))}
               </div>
+              {tab === "layer" && (
+                <div className="shelf-hint">
+                  pick a top to wear <em>underneath</em> the main one — e.g.
+                  a cami peeking under a blouse.
+                </div>
+              )}
               <div className="shelf-grid scrollable">
                 {list.map((it) => (
                   <button

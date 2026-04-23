@@ -105,15 +105,24 @@ export function FigureBody() {
         />
       </g>
 
-      {/* Hair — softly curved cap covering most of the head. */}
+      {/* Hair — one continuous shape: crown cap on top, two panels flowing
+           down behind the shoulders. No gap to expose the face through. */}
       <path
-        d="M82 34
-           Q80 16 100 16
-           Q120 16 118 34
-           Q124 30 122 44
-           Q120 28 100 26
-           Q80 28 78 44
-           Q76 30 82 34 Z"
+        d="M82 36
+           Q78 16 100 14
+           Q122 16 118 36
+           Q124 38 126 58
+           Q130 86 130 110
+           Q126 114 120 110
+           Q120 80 115 58
+           L115 40
+           Q115 28 100 26
+           Q85 28 85 40
+           L85 58
+           Q80 80 80 110
+           Q74 114 70 110
+           Q70 86 74 58
+           Q76 38 82 36 Z"
         fill="#2a1e18"
       />
 
