@@ -3,6 +3,10 @@
  * the user hasn't set their own photo yet. The viewBox coordinates
  * match the garment paths in Mirror.tsx (200×340) so clothing lines
  * up out of the box — it's a paper-doll template, not a real body.
+ *
+ * Single continuous silhouette: head, torso, tapered legs all drawn
+ * as one closed shape with no crotch gap. A minimal face and simple
+ * hair cap keep it readable as a person without fighting the overlay.
  */
 export function FigureBody() {
   return (
@@ -14,68 +18,80 @@ export function FigureBody() {
       style={{ display: "block" }}
       aria-hidden="true"
     >
-      {/* Warm backdrop gradient. */}
       <defs>
         <linearGradient id="body-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#faf2ec" />
           <stop offset="1" stopColor="#efe0d4" />
         </linearGradient>
+        {/* Subtle left-to-right shading so solid skin tone has depth. */}
+        <linearGradient id="body-shade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#000000" stopOpacity="0.08" />
+          <stop offset="0.5" stopColor="#000000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0.12" />
+        </linearGradient>
       </defs>
+
       <rect x="0" y="0" width="200" height="340" fill="url(#body-bg)" />
 
-      {/* Body silhouette — stylized croquis. */}
-      <g fill="#e3bfa1" stroke="#c4a092" strokeWidth="0.5">
-        {/* Neck + torso + legs. Arms are dropped to the sides. */}
+      {/* Single tapered silhouette: head → shoulders → torso → hips → legs,
+          no crotch gap. Arms are implied by the shoulder flare. */}
+      <g>
         <path
-          d="M100 34
-             Q87 34 87 46
-             Q87 54 91 58
-             L85 64
-             Q68 68 65 82
-             L64 138
-             L68 154
-             L74 154
-             L78 138
-             L80 94
-             L86 92
-             L84 108
-             L86 210
-             L90 300
-             L94 326
-             L99 326
-             L100 238
-             L101 326
-             L106 326
-             L110 300
-             L114 210
-             L116 108
-             L114 92
-             L120 94
-             L122 138
-             L126 154
-             L132 154
-             L136 138
-             L135 82
-             Q132 68 115 64
-             L109 58
-             Q113 54 113 46
-             Q113 34 100 34 Z"
+          d="M100 30
+             Q86 30 86 44
+             Q86 54 92 60
+             L88 64
+             Q70 68 66 86
+             L72 138
+             L76 210
+             L78 296
+             L80 330
+             L120 330
+             L122 296
+             L124 210
+             L128 138
+             L134 86
+             Q130 68 112 64
+             L108 60
+             Q114 54 114 44
+             Q114 30 100 30 Z"
+          fill="#e3bfa1"
+        />
+        <path
+          d="M100 30
+             Q86 30 86 44
+             Q86 54 92 60
+             L88 64
+             Q70 68 66 86
+             L72 138
+             L76 210
+             L78 296
+             L80 330
+             L120 330
+             L122 296
+             L124 210
+             L128 138
+             L134 86
+             Q130 68 112 64
+             L108 60
+             Q114 54 114 44
+             Q114 30 100 30 Z"
+          fill="url(#body-shade)"
         />
       </g>
 
-      {/* Simple hair cap + implied face — kept deliberately featureless so
-          it reads as a template, not a person. */}
+      {/* Hair cap — simple rounded shape sitting on the head. */}
       <path
-        d="M82 36
-           Q80 22 100 20
-           Q120 22 118 36
-           Q118 30 100 28
-           Q82 30 82 36 Z"
+        d="M82 32
+           Q80 18 100 18
+           Q120 18 118 32
+           Q118 24 100 24
+           Q82 24 82 32 Z"
         fill="#2a1e18"
       />
 
       {/* Soft ground shadow. */}
-      <ellipse cx="100" cy="332" rx="28" ry="3" fill="#c4a894" opacity="0.35" />
+      <ellipse cx="100" cy="336" rx="34" ry="3" fill="#c4a894" opacity="0.35" />
     </svg>
   );
 }
