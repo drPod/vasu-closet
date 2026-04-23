@@ -198,17 +198,30 @@ async function fetchAsBlob(url: string): Promise<Blob | undefined> {
   }
 }
 
+/** Bump whenever PHOTO_SEEDS / SILHOUETTE_SEEDS / OUTFIT_SEEDS / PLAN_SEEDS
+ *  change. Existing users get their seeded rows replaced with the new
+ *  ones on next load, while their own uploads + saved outfits + plans
+ *  on other dates are preserved. */
+const SEED_VERSION = 2;
+
+const SEED_PLAN_DATES = new Set(PLAN_SEEDS.map((p) => p.date));
+const SEED_OUTFIT_IDS = new Set(OUTFIT_SEEDS.map((o) => o.id));
+
 let seedPromise: Promise<void> | null = null;
 
 export function seedIfEmpty(): Promise<void> {
   // React StrictMode invokes effects twice in dev; share one seed across calls.
   if (seedPromise) return seedPromise;
   seedPromise = (async () => {
+    const profile = await db.profile.get("me");
     const count = await db.items.count();
-    if (count > 0) return;
 
-    // Insert everything immediately so the UI paints; fetch sample garment
-    // photos async and patch them in when they land.
+    // Cases:
+    //   (a) empty DB → first-run seed
+    //   (b) DB exists, seedVersion outdated → replace seeded rows, keep uploads
+    //   (c) DB exists, seedVersion current → do nothing
+    if (count > 0 && profile?.seedVersion === SEED_VERSION) return;
+
     const photoItems: Item[] = PHOTO_SEEDS.map((it, i) => ({
       id: it.id,
       kind: it.kind,
@@ -232,14 +245,27 @@ export function seedIfEmpty(): Promise<void> {
     }));
 
     await db.transaction("rw", db.items, db.outfits, db.plans, db.profile, async () => {
+      // Clear all previously seeded rows. User uploads (seed != true) and
+      // user outfits/plans on non-seeded dates are preserved.
+      await db.items.filter((i) => !!i.seed).delete();
+      await db.outfits
+        .filter((o) => SEED_OUTFIT_IDS.has(o.id) || o.id.startsWith("o"))
+        .delete();
+      await db.plans.filter((p) => SEED_PLAN_DATES.has(p.date)).delete();
+
       await db.items.bulkAdd([...photoItems, ...silhouetteItems]);
       await db.outfits.bulkAdd(OUTFIT_SEEDS);
       await db.plans.bulkAdd(PLAN_SEEDS);
-      await db.profile.put({ id: "me", name: "vasu", handle: "@vasu" });
+      await db.profile.put({
+        ...(profile ?? {}),
+        id: "me",
+        name: profile?.name ?? "vasu",
+        handle: profile?.handle ?? "@vasu",
+        seedVersion: SEED_VERSION,
+      });
     });
 
-    // Fetch sample photos in parallel. Files in /public/samples are
-    // pre-cut transparent PNGs so we skip the in-app flood-fill.
+    // Fetch pre-cut sample photos in parallel.
     void Promise.all(
       PHOTO_SEEDS.map(async (seed) => {
         const blob = await fetchAsBlob(seed.photoUrl);

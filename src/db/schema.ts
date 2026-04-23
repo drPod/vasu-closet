@@ -113,6 +113,10 @@ export type Profile = {
   photoBack?: Blob;
   name?: string;
   handle?: string;
+  /** Version of the seed this DB was populated from. Bumped when the
+   *  sample closet changes so existing users get a fresh demo without
+   *  losing their own uploads, outfits, or plans. */
+  seedVersion?: number;
 };
 
 /** Daily forecast entry from Open-Meteo, mapped to the fields we actually use. */
