@@ -74,6 +74,14 @@ const PHOTO_SEEDS: PhotoSeed[] = [
     photoUrl: "/samples/polo-coral.png",
   },
   {
+    id: "s-shirt-chambray",
+    kind: "top",
+    subkind: "blouse",
+    primaryColor: "#6b8198",
+    name: "chambray shirt",
+    photoUrl: "/samples/shirt-chambray.png",
+  },
+  {
     id: "s-shorts-denim",
     kind: "bottom",
     subkind: "shorts",
@@ -82,26 +90,36 @@ const PHOTO_SEEDS: PhotoSeed[] = [
     photoUrl: "/samples/shorts-denim.png",
     lastWornAt: NOW - 2 * DAY,
   },
+  {
+    id: "s-pants-dark",
+    kind: "bottom",
+    subkind: "jeans",
+    primaryColor: "#23324b",
+    name: "dark jeans",
+    photoUrl: "/samples/pants-dark.png",
+  },
+  {
+    id: "s-blazer-tan",
+    kind: "outer",
+    subkind: "jacket",
+    primaryColor: "#c2a87a",
+    name: "tan blazer",
+    photoUrl: "/samples/blazer-tan.png",
+  },
+  {
+    id: "s-shoes-brown",
+    kind: "shoes",
+    subkind: "flats",
+    primaryColor: "#3d2518",
+    name: "brown brogues",
+    photoUrl: "/samples/shoes-brown.png",
+  },
 ];
 
-/** Flat-color silhouette items for categories we don't have real-photo
- *  samples for yet (dresses, skirts, pants). Rendered faded on the Mirror
- *  to read as placeholders — user upgrades them by uploading real photos. */
-const SILHOUETTE_SEEDS: ItemSeed[] = [
-  { id: "t4", kind: "top", subkind: "blouse", primaryColor: "#e8c4c0", pattern: "floral" },
-  { id: "t6", kind: "top", subkind: "knit", primaryColor: "#c4876e" },
-  { id: "b-jeans-blue", kind: "bottom", subkind: "jeans", primaryColor: "#4a6488" },
-  { id: "b3", kind: "bottom", subkind: "skirt", primaryColor: "#efe4d0" },
-  { id: "b4", kind: "bottom", subkind: "pants", primaryColor: "#b8a688" },
-  { id: "b6", kind: "bottom", subkind: "skirt", primaryColor: "#8a5040" },
-  { id: "d3", kind: "dress", subkind: "dress", primaryColor: "#c88a8f" },
-  { id: "d4", kind: "dress", subkind: "dress", primaryColor: "#8a7ea0", pattern: "floral" },
-];
-
-/** Outfits referencing the new photo seed IDs. */
+/** Outfits reference only real-photo items — no silhouettes in the demo. */
 const OUTFIT_SEEDS: Outfit[] = [
   {
-    id: "o1",
+    id: "o-coffee",
     topId: "s-tee-kiikii",
     bottomId: "s-shorts-denim",
     tag: "coffee",
@@ -109,20 +127,29 @@ const OUTFIT_SEEDS: Outfit[] = [
     savedAt: NOW - 6 * DAY,
   },
   {
-    id: "o2",
+    id: "o-date",
     topId: "s-polo-coral",
-    bottomId: "b-jeans-blue",
+    bottomId: "s-pants-dark",
     tag: "date night",
     name: "coral polo & jeans",
     savedAt: NOW - 3 * DAY,
   },
   {
-    id: "o3",
+    id: "o-class",
     topId: "s-polo-green",
     bottomId: "s-shorts-denim",
-    tag: "today's pick",
+    tag: "class",
     name: "green polo & denim",
     savedAt: NOW - 1 * DAY,
+  },
+  {
+    id: "o-work",
+    topId: "s-shirt-chambray",
+    bottomId: "s-pants-dark",
+    tag: "meeting",
+    name: "chambray & jeans",
+    savedAt: NOW - 4 * DAY,
+    favorite: true,
   },
 ];
 
@@ -132,7 +159,7 @@ const PLAN_SEEDS: Plan[] = [
     id: "2026-04-20",
     date: "2026-04-20",
     topId: "s-tee-kiikii",
-    bottomId: "b-jeans-blue",
+    bottomId: "s-pants-dark",
     event: "monday · WFH",
     weatherNote: "62° · cloudy",
     status: "worn",
@@ -181,7 +208,8 @@ const PLAN_SEEDS: Plan[] = [
   {
     id: "2026-04-26",
     date: "2026-04-26",
-    dressId: "d3",
+    topId: "s-shirt-chambray",
+    bottomId: "s-pants-dark",
     event: "brunch",
     weatherNote: "70° · mix",
     status: "planned",
@@ -198,14 +226,21 @@ async function fetchAsBlob(url: string): Promise<Blob | undefined> {
   }
 }
 
-/** Bump whenever PHOTO_SEEDS / SILHOUETTE_SEEDS / OUTFIT_SEEDS / PLAN_SEEDS
- *  change. Existing users get their seeded rows replaced with the new
- *  ones on next load, while their own uploads + saved outfits + plans
- *  on other dates are preserved. */
-const SEED_VERSION = 2;
+/** Bump whenever PHOTO_SEEDS / OUTFIT_SEEDS / PLAN_SEEDS change. Existing
+ *  users get their seeded rows replaced with the new ones on next load,
+ *  while their own uploads + saved outfits + plans on other dates are
+ *  preserved. */
+const SEED_VERSION = 3;
 
 const SEED_PLAN_DATES = new Set(PLAN_SEEDS.map((p) => p.date));
-const SEED_OUTFIT_IDS = new Set(OUTFIT_SEEDS.map((o) => o.id));
+
+/** All seed outfit IDs across history — used to purge old seeded outfits
+ *  on version bumps without touching user-saved ones. User saves use the
+ *  pattern "o-<base36>-<random>" (two dashes); seeds use "o1"/"o-class". */
+const SEED_OUTFIT_IDS = new Set<string>([
+  "o1", "o2", "o3",                                     // legacy v1/v2
+  ...OUTFIT_SEEDS.map((o) => o.id),                     // current
+]);
 
 let seedPromise: Promise<void> | null = null;
 
@@ -235,25 +270,16 @@ export function seedIfEmpty(): Promise<void> {
       lastWornAt: it.lastWornAt,
       seed: true,
     }));
-    const silhouetteItems: Item[] = SILHOUETTE_SEEDS.map((it, i) => ({
-      ...it,
-      warmth: warmth(it.subkind),
-      formality: formality(it.subkind),
-      wearCount: 0,
-      createdAt: NOW - 100_000 - (SILHOUETTE_SEEDS.length - i) * 1000,
-      seed: true,
-    }));
 
     await db.transaction("rw", db.items, db.outfits, db.plans, db.profile, async () => {
       // Clear all previously seeded rows. User uploads (seed != true) and
       // user outfits/plans on non-seeded dates are preserved.
       await db.items.filter((i) => !!i.seed).delete();
-      await db.outfits
-        .filter((o) => SEED_OUTFIT_IDS.has(o.id) || o.id.startsWith("o"))
-        .delete();
+      // Only touch known seed outfit IDs so user-saved outfits survive.
+      await db.outfits.filter((o) => SEED_OUTFIT_IDS.has(o.id)).delete();
       await db.plans.filter((p) => SEED_PLAN_DATES.has(p.date)).delete();
 
-      await db.items.bulkAdd([...photoItems, ...silhouetteItems]);
+      await db.items.bulkAdd(photoItems);
       await db.outfits.bulkAdd(OUTFIT_SEEDS);
       await db.plans.bulkAdd(PLAN_SEEDS);
       await db.profile.put({
@@ -265,13 +291,20 @@ export function seedIfEmpty(): Promise<void> {
       });
     });
 
-    // Fetch pre-cut sample photos in parallel.
+    // Fetch pre-cut sample photos in parallel. Also seed a default body
+    // photo into Profile so the Mirror shows a figure out of the box —
+    // only if the user hasn't uploaded their own.
     void Promise.all(
       PHOTO_SEEDS.map(async (seed) => {
         const blob = await fetchAsBlob(seed.photoUrl);
         if (blob) await db.items.update(seed.id, { photo: blob });
       }),
     );
+    if (!profile?.photo) {
+      void fetchAsBlob("/samples/sample-person.jpg").then((blob) => {
+        if (blob) void db.profile.update("me", { photo: blob });
+      });
+    }
   })();
   return seedPromise;
 }

@@ -11,5 +11,8 @@ doesn't have to touch them.
 - `polo-green.png` — Unsplash `photo-1586363104862-3a5e2ab60d99` (cropped)
 - `polo-coral.png` — Unsplash `photo-1586363104862-3a5e2ab60d99` (cropped)
 - `shorts-denim.png` — Hamed Daram, Unsplash `photo-1591195853828-11db59a44f6b`
+- `shirt-chambray.png` — Unsplash `photo-1607345366928-199ea26cfe3e`
+- `pants-dark.png`, `shoes-brown.png`, `blazer-tan.png` — Unsplash `photo-1593030761757-71fae45fa0e7` (cropped from a gray-bg flat-lay)
+- `sample-person.jpg` — Unsplash `photo-1515886657613-9f3515b0c78f` (seeded as the default Mirror body photo; user overrides by uploading their own front/side/back)
 
 Replaced by the user as they upload their own closet via intake.
