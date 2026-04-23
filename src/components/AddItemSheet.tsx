@@ -4,27 +4,27 @@ import type { GarmentKind, Item, ItemKind } from "../db/schema";
 import { useBlobUrl } from "../hooks/useBlobUrl";
 import { removeBackground } from "../lib/bg-remove";
 
-type SubkindOption = { kind: ItemKind; sub: GarmentKind; warmth: Item["warmth"]; formality: Item["formality"] };
+type SubkindOption = {
+  kind: ItemKind;
+  sub: GarmentKind;
+  warmth: Item["warmth"];
+  formality: Item["formality"];
+};
 
 const SUBKINDS: SubkindOption[] = [
-  // Tops
   { kind: "top", sub: "cami", warmth: 1, formality: 0 },
   { kind: "top", sub: "tee", warmth: 1, formality: 0 },
   { kind: "top", sub: "blouse", warmth: 2, formality: 1 },
   { kind: "top", sub: "knit", warmth: 3, formality: 0 },
-  // Bottoms
   { kind: "bottom", sub: "jeans", warmth: 2, formality: 0 },
   { kind: "bottom", sub: "pants", warmth: 2, formality: 0 },
   { kind: "bottom", sub: "skirt", warmth: 2, formality: 0 },
   { kind: "bottom", sub: "shorts", warmth: 1, formality: 0 },
-  // Dress
   { kind: "dress", sub: "dress", warmth: 2, formality: 1 },
-  // Shoes
   { kind: "shoes", sub: "sneakers", warmth: 1, formality: 0 },
   { kind: "shoes", sub: "boots", warmth: 3, formality: 1 },
   { kind: "shoes", sub: "heels", warmth: 2, formality: 2 },
   { kind: "shoes", sub: "flats", warmth: 1, formality: 1 },
-  // Outerwear
   { kind: "outer", sub: "cardigan", warmth: 2, formality: 0 },
   { kind: "outer", sub: "jacket", warmth: 3, formality: 0 },
   { kind: "outer", sub: "coat", warmth: 3, formality: 1 },
@@ -53,7 +53,6 @@ async function extractPrimaryColor(blob: Blob): Promise<string> {
     ctx.drawImage(img, 0, 0, size, size);
     const { data } = ctx.getImageData(0, 0, size, size);
     let r = 0, g = 0, b = 0, n = 0;
-    // Skip edge pixels — the center is where the garment actually is.
     for (let y = 4; y < size - 4; y++) {
       for (let x = 4; x < size - 4; x++) {
         const i = (y * size + x) * 4;
@@ -70,13 +69,53 @@ async function extractPrimaryColor(blob: Blob): Promise<string> {
   }
 }
 
+/** Small slot for one angle's photo — shows a preview when uploaded. */
+function PhotoSlot({
+  label,
+  blob,
+  onPick,
+  required,
+}: {
+  label: string;
+  blob: Blob | undefined;
+  onPick: (file: File | undefined) => void;
+  required?: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const url = useBlobUrl(blob);
+  return (
+    <div className="photo-slot-col">
+      <button
+        type="button"
+        className={`photo-slot${blob ? " filled" : ""}`}
+        onClick={() => ref.current?.click()}
+        aria-label={`upload ${label} photo`}
+      >
+        {url ? <img src={url} alt="" /> : <span className="photo-slot-plus">＋</span>}
+      </button>
+      <div className="photo-slot-label">
+        {label}
+        {required && <span className="photo-slot-req">·required</span>}
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: "none" }}
+        onChange={(e) => onPick(e.target.files?.[0])}
+      />
+    </div>
+  );
+}
+
 export function AddItemSheet({ onClose }: { onClose: () => void }) {
-  const [photo, setPhoto] = useState<Blob | undefined>();
+  const [photoFront, setPhotoFront] = useState<Blob | undefined>();
+  const [photoSide, setPhotoSide] = useState<Blob | undefined>();
+  const [photoBack, setPhotoBack] = useState<Blob | undefined>();
   const [subIndex, setSubIndex] = useState<number | null>(null);
   const [cutoutBg, setCutoutBg] = useState(true);
   const [saving, setSaving] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const previewUrl = useBlobUrl(photo);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -85,21 +124,21 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   const picked = subIndex != null ? SUBKINDS[subIndex] : undefined;
-  const canSave = !!photo && !!picked && !saving;
+  const canSave = !!photoFront && !!picked && !saving;
 
-  const handleFile = (file: File | undefined) => {
-    if (!file) return;
-    setPhoto(file);
-  };
+  const cutout = (blob: Blob | undefined) =>
+    blob && cutoutBg ? removeBackground(blob).catch(() => blob) : Promise.resolve(blob);
 
   const handleSave = async () => {
-    if (!photo || !picked) return;
+    if (!photoFront || !picked) return;
     setSaving(true);
     try {
-      const finalPhoto = cutoutBg
-        ? await removeBackground(photo).catch(() => photo)
-        : photo;
-      const primaryColor = await extractPrimaryColor(finalPhoto).catch(() => "#c4a894");
+      const [front, side, back] = await Promise.all([
+        cutout(photoFront),
+        cutout(photoSide),
+        cutout(photoBack),
+      ]);
+      const primaryColor = await extractPrimaryColor(front!).catch(() => "#c4a894");
       const now = Date.now();
       const id = `u-${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
       await db.items.add({
@@ -107,7 +146,9 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
         kind: picked.kind,
         subkind: picked.sub,
         primaryColor,
-        photo: finalPhoto,
+        photo: front,
+        photoSide: side,
+        photoBack: back,
         warmth: picked.warmth,
         formality: picked.formality,
         wearCount: 0,
@@ -125,32 +166,31 @@ export function AddItemSheet({ onClose }: { onClose: () => void }) {
       <div className="sheet" role="dialog" aria-label="add a piece to your closet">
         <div className="sheet-grip" aria-hidden="true" />
         <h2>add to your closet</h2>
-        <div className="muted">a quick photo and a tag is all it takes</div>
+        <div className="muted">
+          take a photo of the garment against a plain backdrop. add side/back
+          shots too if you want a truer fit across poses.
+        </div>
 
         <section className="sheet-section">
-          <div className="sheet-label">photo</div>
-          <button
-            type="button"
-            className="photo-drop"
-            onClick={() => fileRef.current?.click()}
-          >
-            {previewUrl ? (
-              <img src={previewUrl} alt="" />
-            ) : (
-              <>
-                <span className="drop-hint-icon" aria-hidden="true">＋</span>
-                <span>tap to take a photo or pick from library</span>
-              </>
-            )}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: "none" }}
-            onChange={(e) => handleFile(e.target.files?.[0])}
-          />
+          <div className="sheet-label">photos</div>
+          <div className="photo-slots-row">
+            <PhotoSlot
+              label="front"
+              blob={photoFront}
+              onPick={(f) => f && setPhotoFront(f)}
+              required
+            />
+            <PhotoSlot
+              label="side"
+              blob={photoSide}
+              onPick={(f) => f && setPhotoSide(f)}
+            />
+            <PhotoSlot
+              label="back"
+              blob={photoBack}
+              onPick={(f) => f && setPhotoBack(f)}
+            />
+          </div>
         </section>
 
         <section className="sheet-section">

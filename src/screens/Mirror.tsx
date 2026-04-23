@@ -113,6 +113,10 @@ export function MirrorScreen({
 
   const bodyBlob = bodyPhotoForPose(profile, pose);
   const bodyUrl = useBlobUrl(bodyBlob);
+  /** True when the user has a front photo but no photo for the current pose. */
+  const poseFallback =
+    !!profile?.photo &&
+    ((pose === "side" && !profile.photoSide) || (pose === "back" && !profile.photoBack));
 
   // Closet preset takes precedence over plan prefill.
   useEffect(() => {
@@ -372,6 +376,12 @@ export function MirrorScreen({
                   </button>
                 ))}
               </div>
+
+              {poseFallback && (
+                <div className="pose-fallback-hint">
+                  showing your front photo. add a {pose} photo in Profile for a truer angle.
+                </div>
+              )}
 
               {/* Body canvas: either the user's photo for this pose or a
                   stylized illustrated body as a paper-doll template. */}
